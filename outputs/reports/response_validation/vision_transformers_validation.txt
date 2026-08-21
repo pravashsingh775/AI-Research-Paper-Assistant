@@ -1,0 +1,1 @@
+Vision Transformers aggregate global context using multi-head self-attention mechanisms [Ref-2]. Empirical benchmarks on nuScenes [Ref-2] demonstrate superior 3D bounding box mAP for ViTs. Convolutional Neural Networks maintain lower memory footprints and latency on edge modules [Ref-2].

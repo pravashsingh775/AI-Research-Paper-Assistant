@@ -1,0 +1,9 @@
+### Comprehensive Scientific Comparison & Analysis
+
+Based on the retrieved context, Vision Transformers (ViTs) [Ref-1] demonstrate superior global context aggregation compared to Convolutional Neural Networks (CNNs) [Ref-2] in autonomous perception tasks.
+
+1. **Architecture & Global Attention**: ViTs utilize multi-head self-attention mechanisms [Ref-1] to model long-range dependencies across input feature maps without local receptive field constraints.
+2. **Empirical Benchmarks**: On benchmark datasets like nuScenes and KITTI [Ref-2], ViT backbones achieve higher mean Average Precision (mAP) for 3D bounding box detection under complex scenarios.
+3. **Edge Latency & Hardware Limitations**: CNNs maintain lower inference latency and smaller memory footprints on edge hardware (e.g., Jetson modules) due to translation invariance and optimized spatial convolutions [Ref-2].
+
+**Conclusion**: While ViTs achieve peak perception accuracy, hybrid CNN-ViT architectures provide the most balanced accuracy-latency profile for real-time autonomous systems.

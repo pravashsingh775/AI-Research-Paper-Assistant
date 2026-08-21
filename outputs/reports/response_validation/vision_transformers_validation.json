@@ -1,0 +1,144 @@
+{
+  "validation_id": "VAL-981D5BC7",
+  "original_query": "Compare attention mechanisms and vision transformers for autonomous perception",
+  "decision": "REPAIRED_AND_ACCEPTED",
+  "validated_text": "Vision Transformers aggregate global context using multi-head self-attention mechanisms [Ref-2]. Empirical benchmarks on nuScenes [Ref-2] demonstrate superior 3D bounding box mAP for ViTs. Convolutional Neural Networks maintain lower memory footprints and latency on edge modules [Ref-2].",
+  "grounding_report": {
+    "overall_grounding_score": 100.0,
+    "total_claims": 3,
+    "grounded_claims_count": 3,
+    "unsupported_claims_count": 0,
+    "contradicted_claims_count": 0,
+    "claims_matrix": [
+      {
+        "claim_id": "CLM-001",
+        "text": "Vision Transformers aggregate global context using multi-head self-attention mechanisms.",
+        "category": "ARCHITECTURE",
+        "cited_anchors": [],
+        "is_grounded": true,
+        "best_matching_evidence_id": "EV-BLK-1",
+        "similarity_score": 0.9304,
+        "nli_relation": "ENTAILMENT"
+      },
+      {
+        "claim_id": "CLM-002",
+        "text": "Empirical benchmarks on nuScenes [Ref-2] demonstrate superior 3D bounding box mAP for ViTs.",
+        "category": "ARCHITECTURE",
+        "cited_anchors": [
+          "[Ref-2]"
+        ],
+        "is_grounded": true,
+        "best_matching_evidence_id": "EV-BLK-2",
+        "similarity_score": 0.8658,
+        "nli_relation": "ENTAILMENT"
+      },
+      {
+        "claim_id": "CLM-003",
+        "text": "Convolutional Neural Networks maintain lower memory footprints and latency on edge modules [Ref-2].",
+        "category": "GENERAL_FACT",
+        "cited_anchors": [
+          "[Ref-2]"
+        ],
+        "is_grounded": true,
+        "best_matching_evidence_id": "EV-BLK-2",
+        "similarity_score": 0.8246,
+        "nli_relation": "ENTAILMENT"
+      }
+    ]
+  },
+  "citation_records": [
+    {
+      "citation_key": "[Ref-2]",
+      "is_present_in_context": true,
+      "mapped_paper_id": "ARXIV-2",
+      "is_valid_format": true,
+      "status": "VERIFIED",
+      "repaired": false
+    }
+  ],
+  "hallucination_report": {
+    "hallucination_risk_score": 0.0,
+    "detected_hallucinations": [],
+    "fabricated_citations": [],
+    "is_safe_for_publication": true
+  },
+  "coverage_report": {
+    "overall_coverage_pct": 65.0,
+    "dimension_scores": {
+      "Architecture": 100.0,
+      "Datasets": 100.0,
+      "Results": 60.0,
+      "Limitations": 0.0
+    },
+    "missing_dimensions": [
+      "Limitations"
+    ],
+    "completeness_score": 65.7
+  },
+  "calibrated_confidence": {
+    "architecture_confidence": 100.0,
+    "methods_confidence": 98.0,
+    "datasets_confidence": 92.0,
+    "results_confidence": 100.0,
+    "limitations_confidence": 88.0,
+    "overall_confidence": 100.0
+  },
+  "quality_metrics": {
+    "grounding_quality": 100.0,
+    "citation_quality": 100.0,
+    "coverage_score": 65.0,
+    "completeness_score": 65.7,
+    "logical_consistency": 100.0,
+    "nli_entailment_ratio": 1.0,
+    "hallucination_resistance": 100.0,
+    "overall_validation_score": 91.4,
+    "score_breakdown": {
+      "grounding_quality": 25.0,
+      "citation_quality": 15.0,
+      "coverage_score": 9.8,
+      "completeness_score": 6.6,
+      "logical_consistency": 10.0,
+      "nli_entailment_ratio": 10.0,
+      "hallucination_resistance": 15.0
+    },
+    "explanation": "Top 1% Validation Score 91.4/100 computed from grounding (100.0%), NLI entailment (100%), and citation integrity."
+  },
+  "revision_plan": {
+    "requires_revision": false,
+    "suggested_action": "Auto-Repaired 1 unanchored claims with verified context citations. Approved.",
+    "instructions_for_llm": [],
+    "claims_to_remove": [],
+    "citations_repaired": [
+      "Auto-Repaired 1 Anchors"
+    ]
+  },
+  "claim_evidence_matrix": [
+    [
+      0.9304,
+      0.6902
+    ],
+    [
+      0.6783,
+      0.8658
+    ],
+    [
+      0.7529,
+      0.8246
+    ]
+  ],
+  "trace": {
+    "validation_id": "VAL-981D5BC7",
+    "timestamp": "2026-08-11 21:31:31",
+    "decision": "REPAIRED_AND_ACCEPTED",
+    "total_claims_analyzed": 3,
+    "citations_auto_repaired": 1,
+    "total_validation_latency_ms": 282.72,
+    "stage_latencies_ms": {
+      "claim_extraction_ms": 0.0,
+      "grounding_nli_ms": 282.72,
+      "citation_repair_ms": 0.0,
+      "consistency_coverage_ms": 0.0,
+      "quality_decision_ms": 0.0
+    }
+  }
+}

@@ -1,0 +1,137 @@
+{
+  "report_id": "RGDE-3A418B6D",
+  "timestamp": "2026-08-11 21:33:56",
+  "original_query": "Compare attention mechanisms and vision transformers for autonomous perception",
+  "overall_indices": {
+    "research_opportunity_score": 92.5,
+    "gap_confidence_score": 89.8,
+    "research_novelty_index": 89.2,
+    "research_maturity_index": 79.4,
+    "evidence_sufficiency_index": 86.1,
+    "gap_priority_score": 91.1,
+    "cross_domain_innovation_score": 84.5,
+    "feasibility_score": 31.5,
+    "potential_scientific_impact_score": 92.0,
+    "technology_readiness_indicator": 76.2,
+    "metric_definitions": {
+      "ROS": "Research Opportunity Score: Quantifies unexplored potential of a detected scientific gap.",
+      "GCS": "Gap Confidence Score: Evidence-backed confidence in the existence of the research gap.",
+      "RNI": "Research Novelty Index: Measures conceptual uniqueness relative to existing literature.",
+      "RMI": "Research Maturity Index: Evaluates domain saturation and research lifecycle stage.",
+      "ESI": "Evidence Sufficiency Index: Measures strength and density of supporting papers.",
+      "GPS": "Gap Priority Score: Composite metric for ranking actionable research opportunities.",
+      "CDIS": "Cross-Domain Innovation Score: Quantifies interdisciplinary intersection potential.",
+      "FS": "Feasibility Score: Estimates technical ease of execution (100 - Difficulty).",
+      "PSIS": "Potential Scientific Impact Score: Estimates downstream value to the research community.",
+      "TRI": "Technology Readiness Indicator: Estimates proximity to real-world deployment."
+    }
+  },
+  "detected_gaps": [
+    {
+      "gap_id": "GAP-001",
+      "title": "Real-Time Edge Quantization of Self-Attention Mechanisms",
+      "category": "SCALABILITY_LIMITATION",
+      "description": "Attention mechanisms achieve superior context modeling but exhibit quadratic computational complexity, preventing real-time execution on resource-constrained edge ECUs.",
+      "evidence_summary": "Knowledge graph topology reveals dense connections between attention architectures and high mAP metrics, but complete absence of evaluation edges linked to edge latency benchmarks.",
+      "supporting_papers": [
+        "[Ref-1]",
+        "[Ref-2]"
+      ],
+      "knowledge_graph_path": [
+        "Query",
+        "Research Paper",
+        "Vision Transformer",
+        "Uses",
+        "Mean Average Precision (mAP)"
+      ],
+      "confidence": 92.0,
+      "research_opportunity_score": 95.0,
+      "potential_impact": 93.0,
+      "difficulty": 72.0,
+      "risk": 35.0,
+      "recommended_experiments": [
+        "Benchmark INT4 vs FP16 activation quantization across multi-head attention blocks.",
+        "Measure end-to-end inference throughput on NVIDIA Jetson embedded hardware."
+      ],
+      "suggested_datasets": [
+        "nuScenes",
+        "KITTI Vision Benchmark"
+      ],
+      "suggested_baselines": [
+        "Standard FP16 Vision Transformer",
+        "ResNet-50 Baseline"
+      ],
+      "future_work": [
+        "Hardware-software co-design for sparse attention matrix multiplications."
+      ],
+      "related_papers": [
+        "[Ref-1]",
+        "[Ref-2]"
+      ],
+      "generated_hypotheses": [
+        {
+          "hypothesis_id": "HYP-001",
+          "statement": "Applying mixed-precision INT4 quantization to attention projection layers preserves >=98% baseline mAP while achieving a 2.3x speedup on edge hardware.",
+          "null_hypothesis": "INT4 quantization degrades perception accuracy by >12% with negligible latency gains.",
+          "experimental_protocol": "Evaluate nuScenes 3D object detection mAP using TensorRT with calibrated activation scales.",
+          "expected_outcome": "Statistically minor mAP drop (<1.2%) with real-time frame rates (>35 FPS)."
+        }
+      ]
+    },
+    {
+      "gap_id": "GAP-002",
+      "title": "Adverse Weather Robustness in Attention-Based 3D Perception",
+      "category": "EVALUATION_GAP",
+      "description": "Current benchmarks predominantly evaluate perception models under clear daylight conditions, lacking systematic testing for heavy rain, snow, and sensor occlusion.",
+      "evidence_summary": "Retrieved literature confirms high benchmark scores on standard splits but omits adversarial weather degradation analysis in graph evaluation edges.",
+      "supporting_papers": [
+        "[Ref-2]"
+      ],
+      "knowledge_graph_path": [
+        "Query",
+        "Research Paper",
+        "nuScenes Dataset",
+        "Evaluated On",
+        "Mean Average Precision (mAP)"
+      ],
+      "confidence": 87.5,
+      "research_opportunity_score": 90.0,
+      "potential_impact": 91.0,
+      "difficulty": 65.0,
+      "risk": 28.0,
+      "recommended_experiments": [
+        "Synthesize degraded sensor frames using physics-based rain and fog simulations.",
+        "Measure performance drop across attention vs convolutional backbones under adverse weather."
+      ],
+      "suggested_datasets": [
+        "nuScenes-C (Corrupted)",
+        "Oxford RobotCar"
+      ],
+      "suggested_baselines": [
+        "Standard ViT",
+        "ResNet Backbone"
+      ],
+      "future_work": [
+        "Domain generalization algorithms for multi-modal sensor fusion under severe weather."
+      ],
+      "related_papers": [
+        "[Ref-2]"
+      ],
+      "generated_hypotheses": [
+        {
+          "hypothesis_id": "HYP-002",
+          "statement": "Self-attention mechanisms exhibit higher susceptibility to severe scattering noise than spatial convolutions.",
+          "null_hypothesis": "Attention mechanisms and convolutions degrade at identical rates under synthetic fog.",
+          "experimental_protocol": "Inject Gaussian noise and synthetic fog into validation splits; record mAP degradation curves.",
+          "expected_outcome": "Attention backbones display sharper performance collapse due to global token corruption."
+        }
+      ]
+    }
+  ],
+  "execution_trace": {
+    "report_id": "RGDE-3A418B6D",
+    "latency_ms": 0.0,
+    "stages_executed": 20,
+    "timestamp": "2026-08-11 21:33:56"
+  }
+}

@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# VS Code
+.vscode/
+
+# Temporary files
+tempCodeRunnerFile.py
+*.tmp
+*.temp
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local Python environments
+venv/
+.venv/
+env/
+
+# Generated caches
+.pytest_cache/
+.mypy_cache/
+
+# Local vector database / generated indexes
+# Uncomment if these become too large for Git:
+# dataset/vector_database/
+# vector_db/
+
+# Local uploads
+uploads/

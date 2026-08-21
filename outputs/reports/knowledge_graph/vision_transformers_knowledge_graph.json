@@ -1,0 +1,227 @@
+{
+  "graph_id": "SKG-E382B277",
+  "timestamp": "2026-08-11 21:33:55",
+  "nodes": [
+    {
+      "node_id": "PAP-001",
+      "name": "Research Paper [Ref-1]",
+      "entity_type": "Paper",
+      "properties": {
+        "citation_key": "[Ref-1]"
+      },
+      "confidence_score": 0.98,
+      "pagerank_score": 0.025
+    },
+    {
+      "node_id": "PAP-002",
+      "name": "Research Paper [Ref-2]",
+      "entity_type": "Paper",
+      "properties": {
+        "citation_key": "[Ref-2]"
+      },
+      "confidence_score": 0.98,
+      "pagerank_score": 0.025
+    },
+    {
+      "node_id": "ENT-8897",
+      "name": "Vision Transformer",
+      "entity_type": "Architecture",
+      "properties": {
+        "canonical_name": "Vision Transformer"
+      },
+      "confidence_score": 0.92,
+      "pagerank_score": 0.0392
+    },
+    {
+      "node_id": "ENT-9231",
+      "name": "Convolutional Neural Network",
+      "entity_type": "Architecture",
+      "properties": {
+        "canonical_name": "Convolutional Neural Network"
+      },
+      "confidence_score": 0.92,
+      "pagerank_score": 0.0558
+    },
+    {
+      "node_id": "ENT-1635",
+      "name": "Nuscenes Dataset",
+      "entity_type": "Dataset",
+      "properties": {
+        "canonical_name": "Nuscenes Dataset"
+      },
+      "confidence_score": 0.92,
+      "pagerank_score": 0.0392
+    },
+    {
+      "node_id": "ENT-6679",
+      "name": "Mean Average Precision (Map)",
+      "entity_type": "Metric",
+      "properties": {
+        "canonical_name": "Mean Average Precision (Map)"
+      },
+      "confidence_score": 0.92,
+      "pagerank_score": 0.0891
+    }
+  ],
+  "edges": [
+    {
+      "edge_id": "EDG-001",
+      "source_id": "PAP-001",
+      "target_id": "ENT-8897",
+      "relation": "PROPOSES",
+      "evidence_papers": [
+        "[Ref-1]"
+      ],
+      "confidence": 0.95,
+      "properties": {}
+    },
+    {
+      "edge_id": "EDG-002",
+      "source_id": "PAP-001",
+      "target_id": "ENT-9231",
+      "relation": "PROPOSES",
+      "evidence_papers": [
+        "[Ref-1]"
+      ],
+      "confidence": 0.95,
+      "properties": {}
+    },
+    {
+      "edge_id": "EDG-003",
+      "source_id": "PAP-001",
+      "target_id": "ENT-1635",
+      "relation": "EVALUATED_ON",
+      "evidence_papers": [
+        "[Ref-1]"
+      ],
+      "confidence": 0.92,
+      "properties": {}
+    },
+    {
+      "edge_id": "EDG-004",
+      "source_id": "PAP-002",
+      "target_id": "ENT-8897",
+      "relation": "PROPOSES",
+      "evidence_papers": [
+        "[Ref-2]"
+      ],
+      "confidence": 0.95,
+      "properties": {}
+    },
+    {
+      "edge_id": "EDG-005",
+      "source_id": "PAP-002",
+      "target_id": "ENT-9231",
+      "relation": "PROPOSES",
+      "evidence_papers": [
+        "[Ref-2]"
+      ],
+      "confidence": 0.95,
+      "properties": {}
+    },
+    {
+      "edge_id": "EDG-006",
+      "source_id": "PAP-002",
+      "target_id": "ENT-1635",
+      "relation": "EVALUATED_ON",
+      "evidence_papers": [
+        "[Ref-2]"
+      ],
+      "confidence": 0.92,
+      "properties": {}
+    },
+    {
+      "edge_id": "EDG-007",
+      "source_id": "ENT-8897",
+      "target_id": "ENT-6679",
+      "relation": "USES",
+      "evidence_papers": [
+        "[Ref-1]"
+      ],
+      "confidence": 0.91,
+      "properties": {}
+    },
+    {
+      "edge_id": "EDG-008",
+      "source_id": "ENT-9231",
+      "target_id": "ENT-6679",
+      "relation": "USES",
+      "evidence_papers": [
+        "[Ref-1]"
+      ],
+      "confidence": 0.91,
+      "properties": {}
+    },
+    {
+      "edge_id": "EDG-009",
+      "source_id": "ENT-8897",
+      "target_id": "ENT-9231",
+      "relation": "COMPARES_WITH",
+      "evidence_papers": [
+        "[Ref-1]"
+      ],
+      "confidence": 0.9,
+      "properties": {}
+    }
+  ],
+  "indices": {
+    "scientific_knowledge_score": 93.4,
+    "graph_trust_score": 92.9,
+    "evidence_connectivity_index": 100.0,
+    "research_influence_score": 51.0,
+    "knowledge_completeness_index": 50.0,
+    "definitions_and_formulas": {
+      "SKS": "Scientific Knowledge Score: Composite measure of node and edge evidence confidence.",
+      "GTS": "Graph Trust Score: Quantifies reliability of semantic relationships.",
+      "ECI": "Evidence Connectivity Index: Measures density of evidentiary grounding across the graph.",
+      "RIS": "Research Influence Score: Estimates structural importance of research entities.",
+      "KCI": "Knowledge Completeness Index: Evaluates ontological coverage of retrieved literature."
+    }
+  },
+  "analytics": {
+    "total_nodes": 6,
+    "total_edges": 9,
+    "graph_density": 0.3,
+    "average_degree": 3.0,
+    "connected_components": 1,
+    "top_central_nodes": [
+      {
+        "node_id": "ENT-6679",
+        "name": "Mean Average Precision (Map)",
+        "pagerank": 0.0891
+      },
+      {
+        "node_id": "ENT-9231",
+        "name": "Convolutional Neural Network",
+        "pagerank": 0.0558
+      },
+      {
+        "node_id": "ENT-8897",
+        "name": "Vision Transformer",
+        "pagerank": 0.0392
+      }
+    ]
+  },
+  "recommendations": [
+    {
+      "recommendation_id": "REC-001",
+      "target_entity": "Nuscenes Dataset",
+      "recommendation_type": "Dataset Benchmark Synergy",
+      "reasoning_path": [
+        "Query",
+        "Research Paper",
+        "Vision Transformer",
+        "Evaluated On",
+        "Nuscenes Dataset"
+      ],
+      "explanation": "Multi-hop reasoning path discovered that Vision Transformer is rigorously evaluated on Nuscenes Dataset, establishing high benchmark synergy for autonomous perception tasks.",
+      "confidence": 94.5
+    }
+  ],
+  "execution_trace": {
+    "graph_id": "SKG-E382B277",
+    "latency_ms": 0.0,
+    "stages_executed": 20,
+    "timestamp": "2026-08-11 21:33:55"
+  }
+}

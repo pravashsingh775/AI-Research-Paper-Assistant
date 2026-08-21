@@ -1,0 +1,98 @@
+[
+  {
+    "id": "REF-001",
+    "type": "article-journal",
+    "title": "Attention Is All You Need",
+    "author": [
+      {
+        "family": "Vaswani",
+        "given": "Ashish"
+      },
+      {
+        "family": "Shazeer",
+        "given": "Noam"
+      },
+      {
+        "family": "Parmar",
+        "given": "Niki"
+      },
+      {
+        "family": "Uszkoreit",
+        "given": "Jakob"
+      }
+    ],
+    "issued": {
+      "date-parts": [
+        [
+          2017
+        ]
+      ]
+    },
+    "container-title": "Advances in Neural Information Processing Systems (NeurIPS)",
+    "DOI": "10.5555/3295222.3295349"
+  },
+  {
+    "id": "REF-002",
+    "type": "article-journal",
+    "title": "nuScenes: A multimodal dataset for autonomous driving",
+    "author": [
+      {
+        "family": "Caesar",
+        "given": "Holger"
+      },
+      {
+        "family": "Bankiti",
+        "given": "Varun"
+      },
+      {
+        "family": "Lang",
+        "given": "Alex H."
+      },
+      {
+        "family": "Vora",
+        "given": "Sourabh"
+      }
+    ],
+    "issued": {
+      "date-parts": [
+        [
+          2020
+        ]
+      ]
+    },
+    "container-title": "IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)",
+    "DOI": "10.1109/CVPR42600.2020.01164"
+  },
+  {
+    "id": "REF-003",
+    "type": "article-journal",
+    "title": "An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale",
+    "author": [
+      {
+        "family": "Dosovitskiy",
+        "given": "Alexey"
+      },
+      {
+        "family": "Beyer",
+        "given": "Lucas"
+      },
+      {
+        "family": "Kolesnikov",
+        "given": "Alexander"
+      },
+      {
+        "family": "Weissenborn",
+        "given": "Dirk"
+      }
+    ],
+    "issued": {
+      "date-parts": [
+        [
+          2021
+        ]
+      ]
+    },
+    "container-title": "International Conference on Learning Representations (ICLR)",
+    "DOI": "10.48550/arXiv.2010.11929"
+  }
+]
