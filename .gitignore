@@ -1,0 +1,23 @@
+.env
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Runtime logs and generated debug dumps
+*.log
+*.err
+*_debug.txt
+*_source.txt
+*_full.txt
+*_output.txt
+/*.txt
+!/requirements.txt
+
+# Local datasets, indexes, model weights, and generated outputs
+data/raw/
+data/processed/
+indexes/
+models/
+outputs/
