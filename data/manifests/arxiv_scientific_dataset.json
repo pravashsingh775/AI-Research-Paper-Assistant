@@ -1,0 +1,35 @@
+{
+  "name": "arxiv_scientific_dataset",
+  "format": "csv",
+  "path_env": "ARXIV_DATASET_PATH",
+  "source_path": "data/raw/corpus/arxiv_scientific_dataset.csv",
+  "original_source_path": "C:/Users/PRAVASH/Desktop/Projects/AI-Research-Paper-Assistant/data/raw/arxiv_scientific_dataset.csv",
+  "processed_path": "data/processed/arxiv_papers.jsonl",
+  "size_bytes": 430180631,
+  "sha256": "c82f4f3354d952f1bf73a06bf8f667acc0d94ebf3fde315c977c02d221b5d551",
+  "row_count": 287421,
+  "columns": [
+    "id",
+    "title",
+    "category",
+    "category_code",
+    "published_date",
+    "updated_date",
+    "authors",
+    "first_author",
+    "summary",
+    "summary_word_count"
+  ],
+  "validated": {
+    "encoding": "utf-8-sig",
+    "malformed_rows": 0,
+    "rows_with_missing_fields": 0,
+    "validated_at": "2026-08-26"
+  },
+  "ingestion_notes": [
+    "Use id as the source identifier and preserve category_code as the primary subject label.",
+    "Parse authors as source text first; normalize into author records during ingestion.",
+    "Treat summary as abstract text and recompute summary_word_count after normalization.",
+    "Deduplicate against DOI or source identifier before embedding and indexing."
+  ]
+}
