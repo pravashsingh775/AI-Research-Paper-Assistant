@@ -89,7 +89,7 @@ sequenceDiagram
     participant R as Redis
     participant W as Worker
     B->>A: POST /api/papers/upload (multipart PDF + JWT)
-    A->>A: Validate PDF magic bytes, size (<25MB), pages (<500)
+    A->>A: Validate PDF magic bytes, size (under 25MB), max 500 pages
     A->>P: Create Paper (PROCESSING) & Document record
     A->>M: PUT object papers/{owner_id}/{paper_id}/{filename}
     A->>P: Create BackgroundJob (PENDING)
