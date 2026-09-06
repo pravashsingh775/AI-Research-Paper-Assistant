@@ -695,8 +695,10 @@ async def search(request: SearchRequest) -> dict[str, Any]:
         for paper in papers:
             external_id = str(paper.get("doi") or paper.get("id") or paper.get("title"))
             stored = (
-                await session.execute(select(Paper).where(Paper.external_id == external_id))
-            ).scalar_one_or_none()
+                await session.execute(
+                    select(Paper).where(Paper.external_id == external_id).order_by(Paper.created_at.desc())
+                )
+            ).scalars().first()
             if not stored:
                 state = "processing" if paper.get("pdf_url") else "metadata-only"
                 stored = Paper(
@@ -899,16 +901,18 @@ async def _process_paper_job(
                         DocumentChunk(
                             document_id=document.id,
                             text=normalize_extracted_text(chunk.text),
-                            section=normalize_extracted_text(chunk.section) if chunk.section else "Body",
+                            section=normalize_extracted_text(chunk.section)
+                            if chunk.section
+                            else "Body",
                             page=chunk.page,
                             chunk_index=chunk.index,
                             embedding=chunk.embedding,
                         )
                     )
             job.progress = 70
-            analysis = await _model_analysis(norm_title, norm_text, "extracted PDF text") or _analysis(
+            analysis = await _model_analysis(
                 norm_title, norm_text, "extracted PDF text"
-            )
+            ) or _analysis(norm_title, norm_text, "extracted PDF text")
             session.add(
                 PaperAnalysis(
                     paper_id=paper_id,

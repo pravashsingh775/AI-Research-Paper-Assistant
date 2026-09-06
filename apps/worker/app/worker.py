@@ -41,9 +41,7 @@ from apps.api.app.services.text_normalization import (
 )
 
 logger = logging.getLogger("worker")
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 
 _shutdown_event = asyncio.Event()
 
@@ -82,9 +80,7 @@ async def consume() -> None:
                 )
                 await process(payload)
         except RedisError as exc:
-            logger.warning(
-                f"Redis connection error: {exc}. Reconnecting in 3 seconds..."
-            )
+            logger.warning(f"Redis connection error: {exc}. Reconnecting in 3 seconds...")
             if redis:
                 await redis.aclose()
                 redis = None
@@ -139,9 +135,7 @@ async def process(payload: dict[str, Any]) -> None:
             if job_type == "CORPUS_FULL_TEXT_INGESTION":
                 await _ingest_corpus_full_text(session, job, paper_id)
             elif job_type == "PAPER_PROCESSING":
-                document_id = (
-                    UUID(payload["document_id"]) if payload.get("document_id") else None
-                )
+                document_id = UUID(payload["document_id"]) if payload.get("document_id") else None
                 await _process_uploaded_pdf(session, job, paper_id, document_id)
             else:
                 logger.error(f"Unknown job type: {job_type}")
@@ -229,9 +223,7 @@ async def _process_uploaded_pdf(
     for page_no, page_text in enumerate(page_texts, start=1):
         for chunk in chunk_text(page_text, page_no):
             norm_chunk_text = normalize_extracted_text(chunk.text)
-            norm_section = (
-                normalize_extracted_text(chunk.section) if chunk.section else "Body"
-            )
+            norm_section = normalize_extracted_text(chunk.section) if chunk.section else "Body"
             chunks.append(
                 Chunk(
                     text=norm_chunk_text,
@@ -329,9 +321,7 @@ async def _ingest_corpus_full_text(
     await session.commit()
 
     async with httpx.AsyncClient(timeout=45, follow_redirects=True) as client:
-        response = await client.get(
-            paper.pdf_url, headers={"Accept": "application/pdf"}
-        )
+        response = await client.get(paper.pdf_url, headers={"Accept": "application/pdf"})
         response.raise_for_status()
 
     content = response.content
@@ -368,9 +358,7 @@ async def _ingest_corpus_full_text(
     for page_no, page_text in enumerate(page_texts, start=1):
         for chunk in chunk_text(page_text, page_no):
             norm_chunk_text = normalize_extracted_text(chunk.text)
-            norm_section = (
-                normalize_extracted_text(chunk.section) if chunk.section else "Body"
-            )
+            norm_section = normalize_extracted_text(chunk.section) if chunk.section else "Body"
             chunks.append(
                 Chunk(
                     text=norm_chunk_text,

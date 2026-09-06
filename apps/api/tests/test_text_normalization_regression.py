@@ -76,7 +76,9 @@ def test_arxiv_1307_0411_exact_reproduction() -> None:
     assert valid_title is True
     assert err_title is None
 
-    valid_abstract, err_abstract = validate_text_for_persistence(clean_abstract, field_name="abstract")
+    valid_abstract, err_abstract = validate_text_for_persistence(
+        clean_abstract, field_name="abstract"
+    )
     assert valid_abstract is True
     assert err_abstract is None
 
@@ -115,7 +117,9 @@ def test_scientific_and_multilingual_unicode_preservation() -> None:
 
 def test_validate_text_for_persistence_rejects_nul() -> None:
     """validate_text_for_persistence must detect NUL bytes."""
-    is_valid, err_msg = validate_text_for_persistence("text with \x00 NUL byte", field_name="test_field")
+    is_valid, err_msg = validate_text_for_persistence(
+        "text with \x00 NUL byte", field_name="test_field"
+    )
     assert is_valid is False
     assert err_msg is not None
     assert "prohibited NUL byte" in err_msg
@@ -309,14 +313,20 @@ async def test_worker_failure_isolation_and_recovery() -> None:
     job_b_id = uuid4()
 
     async with SessionFactory() as session:
-        user = User(id=user_id, email=f"recovery_{uuid4().hex[:8]}@example.com", password_hash="dummy")
+        user = User(
+            id=user_id, email=f"recovery_{uuid4().hex[:8]}@example.com", password_hash="dummy"
+        )
         session.add(user)
         await session.flush()
 
         paper_a = Paper(id=paper_a_id, title="Job A Paper", source="test", owner_id=user_id)
         paper_b = Paper(id=paper_b_id, title="Job B Paper", source="test", owner_id=user_id)
-        job_a = BackgroundJob(id=job_a_id, user_id=user_id, type="PAPER_PROCESSING", status="PENDING")
-        job_b = BackgroundJob(id=job_b_id, user_id=user_id, type="PAPER_PROCESSING", status="PENDING")
+        job_a = BackgroundJob(
+            id=job_a_id, user_id=user_id, type="PAPER_PROCESSING", status="PENDING"
+        )
+        job_b = BackgroundJob(
+            id=job_b_id, user_id=user_id, type="PAPER_PROCESSING", status="PENDING"
+        )
         session.add_all([paper_a, paper_b, job_a, job_b])
         await session.commit()
 
