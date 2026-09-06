@@ -39,9 +39,12 @@ export default function AppHeader() {
 
   return (
     <header className="app-header">
-      <Link className="brand" href="/">
-        LUMEN <span>RESEARCH</span>
+      <Link className="brand" href="/" aria-label="Lumen Research Home">
+        <span className="brand-icon">⚛</span>
+        <span className="brand-title">LUMEN</span>
+        <span className="brand-badge">RESEARCH</span>
       </Link>
+
       <nav className="app-nav" aria-label="Research workspace">
         {links.map(([label, href]) => {
           const isActive = pathname === href || (href !== "/" && pathname.startsWith(href));
@@ -56,26 +59,40 @@ export default function AppHeader() {
           );
         })}
       </nav>
-      <div className="auth-actions">
-        {email ? (
-          <>
-            <span className="user-chip" title={email}>
-              {email.slice(0, 1).toUpperCase()}
-            </span>
-            <button type="button" className="link-button" onClick={logout}>
-              Sign out
-            </button>
-          </>
-        ) : (
-          <>
-            <Link href="/login" className="link-button">
-              Sign in
-            </Link>
-            <Link className="primary small-button" href="/register">
-              Create account
-            </Link>
-          </>
-        )}
+
+      <div className="header-actions">
+        <div className="status-indicator" title="All backend, Redis and pgvector services active">
+          <span className="status-pulse" />
+          <span>Live Systems</span>
+        </div>
+
+        <div className="auth-actions">
+          {email ? (
+            <>
+              <div className="user-chip" title={email}>
+                <span className="user-avatar">{email.slice(0, 1).toUpperCase()}</span>
+                <span className="user-email-text">{email}</span>
+              </div>
+              <button
+                type="button"
+                className="secondary small-button"
+                onClick={logout}
+                title="Sign out of your session"
+              >
+                Sign out
+              </button>
+            </>
+          ) : (
+            <>
+              <Link href="/login" className="secondary small-button">
+                Sign in
+              </Link>
+              <Link href="/register" className="primary small-button">
+                Get Started
+              </Link>
+            </>
+          )}
+        </div>
       </div>
     </header>
   );

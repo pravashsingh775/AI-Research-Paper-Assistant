@@ -95,7 +95,9 @@ async def run_all_feature_tests() -> None:
         assert resp_ready.status_code == 200, f"Readiness check failed: {resp_ready.text}"
         ready_data = resp_ready.json()
         print(f"  [OK] /health status: {resp_health.json()['status']}")
-        print(f"  [OK] /readiness checks: Database={ready_data['checks']['database']}, Redis={ready_data['checks']['redis']}, Storage={ready_data['checks']['storage']} ({dur:.1f}ms)")
+        print(
+            f"  [OK] /readiness checks: Database={ready_data['checks']['database']}, Redis={ready_data['checks']['redis']}, Storage={ready_data['checks']['storage']} ({dur:.1f}ms)"
+        )
         print()
 
         # -------------------------------------------------------------
@@ -146,10 +148,14 @@ async def run_all_feature_tests() -> None:
         assert search_resp.status_code == 200, f"Search failed: {search_resp.text}"
         search_data = search_resp.json()
         papers = search_data.get("papers", [])
-        print(f"  [OK] Federated search for '{search_topic}': {len(papers)} papers returned ({dur:.1f}ms)")
+        print(
+            f"  [OK] Federated search for '{search_topic}': {len(papers)} papers returned ({dur:.1f}ms)"
+        )
         if papers:
             top = papers[0]
-            print(f"       Top match: \"{top['title'][:65]}...\" (Source: {top.get('source')}, Year: {top.get('year')})")
+            print(
+                f'       Top match: "{top["title"][:65]}..." (Source: {top.get("source")}, Year: {top.get("year")})'
+            )
         print()
 
         # -------------------------------------------------------------
@@ -192,7 +198,7 @@ async def run_all_feature_tests() -> None:
         assert paper_detail_resp.status_code == 200
         p_info = paper_detail_resp.json()
         print(f"  [OK] Paper evidence state: '{p_info['evidence_state']}' (Full-Text Verified)")
-        print(f"       Extracted Title: \"{p_info['title']}\"")
+        print(f'       Extracted Title: "{p_info["title"]}"')
         print()
 
         # -------------------------------------------------------------
@@ -210,9 +216,9 @@ async def run_all_feature_tests() -> None:
         dur = (time.perf_counter() - t0) * 1000
         assert qa_resp.status_code == 200, f"QA failed: {qa_resp.text}"
         qa_data = qa_resp.json()
-        print(f"  [OK] Grounded Question: \"{q_grounded}\"")
+        print(f'  [OK] Grounded Question: "{q_grounded}"')
         print(f"       Status: {qa_data['status']} ({dur:.1f}ms)")
-        print(f"       Answer: \"{qa_data['answer'][:80]}...\"")
+        print(f'       Answer: "{qa_data["answer"][:80]}..."')
         print(f"       Evidence citations: {len(qa_data.get('evidence', []))} chunk(s) referenced")
 
         # 5b. Unmentioned Fact (Abstention Test)
@@ -224,7 +230,7 @@ async def run_all_feature_tests() -> None:
         )
         assert qa_unmentioned_resp.status_code == 200
         un_data = qa_unmentioned_resp.json()
-        print(f"  [OK] Unmentioned Question: \"{q_unmentioned}\"")
+        print(f'  [OK] Unmentioned Question: "{q_unmentioned}"')
         print(f"       Status: {un_data['status']} (Faithfully abstained: zero hallucination)")
         print()
 
@@ -244,7 +250,7 @@ async def run_all_feature_tests() -> None:
         chat_data = chat_resp.json()
         session_id = chat_data["session_id"]
         print(f"  [OK] Chat session created: ID={session_id}")
-        print(f"       Assistant response: \"{chat_data['answer'][:80]}...\"")
+        print(f'       Assistant response: "{chat_data["answer"][:80]}..."')
         print(f"       Citations count: {len(chat_data.get('citations', []))}")
         print()
 
@@ -304,7 +310,9 @@ async def run_all_feature_tests() -> None:
                 },
             ],
         }
-        comp_resp = await client.post(f"{API_BASE}/api/compare", headers=headers, json=compare_payload)
+        comp_resp = await client.post(
+            f"{API_BASE}/api/compare", headers=headers, json=compare_payload
+        )
         assert comp_resp.status_code == 200, f"Compare failed: {comp_resp.text}"
         comp_data = comp_resp.json()
         print(f"  [OK] Comparative synthesis generated across {len(comp_data['papers'])} papers")
@@ -316,29 +324,47 @@ async def run_all_feature_tests() -> None:
         # -------------------------------------------------------------
         print("Feature 9: Analytical Discovery Tools (Trends, Gaps, Ideas, Proposals, Similarity)")
         # 9a. Trends
-        trends_resp = await client.post(f"{API_BASE}/api/trends", headers=headers, json=compare_payload)
+        trends_resp = await client.post(
+            f"{API_BASE}/api/trends", headers=headers, json=compare_payload
+        )
         assert trends_resp.status_code == 200
-        print(f"  [OK] /api/trends: Emerging keywords -> {trends_resp.json()['emerging_keywords'][:4]}")
+        print(
+            f"  [OK] /api/trends: Emerging keywords -> {trends_resp.json()['emerging_keywords'][:4]}"
+        )
 
         # 9b. Research Gaps
-        gaps_resp = await client.post(f"{API_BASE}/api/research-gaps", headers=headers, json=compare_payload)
+        gaps_resp = await client.post(
+            f"{API_BASE}/api/research-gaps", headers=headers, json=compare_payload
+        )
         assert gaps_resp.status_code == 200
-        print(f"  [OK] /api/research-gaps: Identified {len(gaps_resp.json()['evidence_based_findings'])} evidence-based finding(s)")
+        print(
+            f"  [OK] /api/research-gaps: Identified {len(gaps_resp.json()['evidence_based_findings'])} evidence-based finding(s)"
+        )
 
         # 9c. Research Ideas
-        ideas_resp = await client.post(f"{API_BASE}/api/research-ideas", headers=headers, json=compare_payload)
+        ideas_resp = await client.post(
+            f"{API_BASE}/api/research-ideas", headers=headers, json=compare_payload
+        )
         assert ideas_resp.status_code == 200
-        print(f"  [OK] /api/research-ideas: Generated proposal topic -> \"{ideas_resp.json()['ideas'][0]['title']}\"")
+        print(
+            f'  [OK] /api/research-ideas: Generated proposal topic -> "{ideas_resp.json()["ideas"][0]["title"]}"'
+        )
 
         # 9d. Proposals
-        prop_resp = await client.post(f"{API_BASE}/api/proposals", headers=headers, json=compare_payload)
+        prop_resp = await client.post(
+            f"{API_BASE}/api/proposals", headers=headers, json=compare_payload
+        )
         assert prop_resp.status_code == 200
-        print(f"  [OK] /api/proposals: Draft title -> \"{prop_resp.json()['title']}\"")
+        print(f'  [OK] /api/proposals: Draft title -> "{prop_resp.json()["title"]}"')
 
         # 9e. Similarity Map
-        sim_resp = await client.post(f"{API_BASE}/api/similarity-map", headers=headers, json=compare_payload)
+        sim_resp = await client.post(
+            f"{API_BASE}/api/similarity-map", headers=headers, json=compare_payload
+        )
         assert sim_resp.status_code == 200
-        print(f"  [OK] /api/similarity-map: Generated graph with {len(sim_resp.json()['nodes'])} nodes and {len(sim_resp.json()['edges'])} edges")
+        print(
+            f"  [OK] /api/similarity-map: Generated graph with {len(sim_resp.json()['nodes'])} nodes and {len(sim_resp.json()['edges'])} edges"
+        )
         print()
 
         # -------------------------------------------------------------

@@ -69,10 +69,11 @@ type ChatResponse = {
 };
 
 const SUGGESTED_QUERIES = [
-  "retrieval augmented generation",
-  "graph neural networks",
-  "attention mechanisms",
-  "diffusion models",
+  { label: "Quantum Machine Learning", icon: "⚛️" },
+  { label: "Retrieval Augmented Generation", icon: "⚡" },
+  { label: "Graph Neural Networks", icon: "🕸️" },
+  { label: "Diffusion Models", icon: "🧬" },
+  { label: "Attention Mechanisms", icon: "🧠" },
 ];
 
 export default function Home() {
@@ -80,7 +81,9 @@ export default function Home() {
   const [papers, setPapers] = useState<Paper[]>([]);
   const [selected, setSelected] = useState<Paper | null>(null);
   const [question, setQuestion] = useState("");
-  const [chatHistory, setChatHistory] = useState<Array<{ role: "user" | "assistant"; content: string; evidence?: Evidence[]; status?: string }>>([]);
+  const [chatHistory, setChatHistory] = useState<
+    Array<{ role: "user" | "assistant"; content: string; evidence?: Evidence[]; status?: string }>
+  >([]);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -123,7 +126,13 @@ export default function Home() {
           setJobProgress(job.progress);
           if (job.status === "COMPLETED") {
             setSelected(current =>
-              current ? { ...current, evidence_state: "full-text", analysis: job.result?.analysis ?? current.analysis } : current
+              current
+                ? {
+                    ...current,
+                    evidence_state: "full-text",
+                    analysis: job.result?.analysis ?? current.analysis,
+                  }
+                : current
             );
             setMessage("Paper extraction and vector indexing complete. Full-text Q&A is now active.");
             setJobId(null);
@@ -131,7 +140,7 @@ export default function Home() {
             setError(job.error || "Paper processing failed.");
             setJobId(null);
           } else {
-            setMessage(`Extracting & indexing document (${job.progress}%)...`);
+            setMessage(`Extracting pages & generating embeddings (${job.progress}%)...`);
           }
         })
         .catch(reason => {
@@ -158,7 +167,7 @@ export default function Home() {
         method: "POST",
         body: JSON.stringify({ topic: query.trim() }),
       });
-      setPapers(data.papers);
+      setPapers(data.papers || []);
       setMessage(data.notice || "");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Search failed.");
@@ -171,7 +180,7 @@ export default function Home() {
     const file = event.target.files?.[0];
     if (!file) return;
     if (file.type !== "application/pdf" && !file.name.endsWith(".pdf")) {
-      setError("Please select a PDF file.");
+      setError("Please select a valid PDF file.");
       return;
     }
     setBusy(true);
@@ -187,7 +196,7 @@ export default function Home() {
     body.append("file", file);
 
     try {
-      const data = await api<Paper & { document_id: string; job_id: string; status: Job["status"] }>(
+      const data = await api<Paper & { id: string; document_id: string; job_id: string; status: Job["status"] }>(
         "/api/papers/upload",
         { method: "POST", body }
       );
@@ -195,7 +204,7 @@ export default function Home() {
       selectPaper({ ...data, source: "upload", evidence_state: "processing" });
       setJobId(data.job_id);
       setJobStatus(data.status);
-      setMessage("Paper uploaded. Background worker is extracting pages and generating embeddings...");
+      setMessage("Paper uploaded. Background worker is extracting pages and indexing chunks...");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Upload failed.");
       setJobStatus(null);
@@ -248,57 +257,82 @@ export default function Home() {
     <main className="shell">
       <AppHeader />
 
+      {/* Hero Section */}
       <section className="hero">
-        <div className="eyebrow">Academic Intelligence Platform</div>
-        <h1>Find the evidence<br />behind the paper.</h1>
+        <div className="eyebrow">
+          <span>✨ Next-Gen Research Intelligence</span>
+          <span>·</span>
+          <span>pgvector & arXiv Grounded</span>
+        </div>
+        <h1>
+          Discover Scholarly Evidence. <br />
+          <span className="text-gradient">Uncover Verified Truth.</span>
+        </h1>
         <p>
-          Search scholarly literature across OpenAlex, explore verified citations, upload private PDFs,
-          and ask questions grounded strictly in paper text.
+          Search millions of peer-reviewed papers across OpenAlex and arXiv, upload private PDFs,
+          and ask complex empirical questions with mathematically verified citations.
         </p>
 
+        {/* Command Search Bar */}
         <form className="search" onSubmit={e => search(e)}>
+          <span className="search-icon-prefix">🔍</span>
           <input
             value={topic}
             onChange={event => setTopic(event.target.value)}
-            placeholder="Search topic: retrieval augmented generation, graph neural networks..."
+            placeholder="Search topic or keywords: quantum machine learning, graph neural networks..."
             aria-label="Research topic"
           />
+          <span className="shortcut-badge">↵ Enter</span>
           <button className="primary" disabled={busy}>
             {busy ? "Searching..." : "Search literature"}
           </button>
         </form>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 12, color: "var(--muted)", fontWeight: 600 }}>Suggested topics:</span>
+        {/* Suggested Queries */}
+        <div className="suggestion-chips">
+          <span style={{ fontSize: 12, color: "var(--muted)", fontWeight: 600 }}>Suggested:</span>
           {SUGGESTED_QUERIES.map(q => (
             <button
-              key={q}
+              key={q.label}
               type="button"
-              className="link-button"
-              style={{ fontSize: 12, background: "var(--cream)", padding: "3px 10px", borderRadius: "var(--radius-sm)" }}
+              className="chip-btn"
               onClick={() => {
-                setTopic(q);
-                search(undefined, q);
+                setTopic(q.label);
+                search(undefined, q.label);
               }}
             >
-              {q}
+              <span>{q.icon}</span>
+              <span>{q.label}</span>
             </button>
           ))}
         </div>
       </section>
 
+      {/* Split Workspace Layout */}
       <div className="layout">
+        {/* Left Column: Results or Paper Workspace */}
         <section>
           <div className="section-head">
-            <h2>{papers.length ? "Ranked Literature Results" : selected ? "Active Paper Workspace" : "Research Desk"}</h2>
+            <h2>
+              {papers.length
+                ? "Ranked Literature Results"
+                : selected
+                ? "Active Paper Workspace"
+                : "Research Desk"}
+            </h2>
             <span className="count">
-              {papers.length ? `${papers.length} scholarly papers retrieved` : selected ? "Viewing selected paper" : "Ready for query"}
+              {papers.length
+                ? `${papers.length} scholarly papers retrieved`
+                : selected
+                ? "Viewing selected paper"
+                : "Ready for query"}
             </span>
           </div>
 
           {message && <div className="notice" role="status">{message}</div>}
           {error && <p className="error" role="alert">{error}</p>}
 
+          {/* Results List */}
           {papers.length > 0 && (
             <div className="results">
               {papers.map((paper, index) => (
@@ -308,16 +342,30 @@ export default function Home() {
                   onClick={() => selectPaper(paper)}
                 >
                   <div className="paper-meta">
-                    <span>{String(index + 1).padStart(2, "0")} / {paper.source || "Scholar"}</span>
+                    <span className="paper-source-tag">
+                      <strong>#{String(index + 1).padStart(2, "0")}</strong>
+                      <span>·</span>
+                      <span>{paper.source ? paper.source.toUpperCase() : "SCHOLAR"}</span>
+                      {paper.published_date && (
+                        <>
+                          <span>·</span>
+                          <span>{paper.published_date.slice(0, 4)}</span>
+                        </>
+                      )}
+                    </span>
                     <StatusBadge state={paper.evidence_state} />
                   </div>
                   <h3>{paper.title}</h3>
                   <p>{paper.analysis?.summary || paper.summary || "Abstract unavailable in this record."}</p>
                   <div className="paper-foot">
-                    <span>{paper.first_author || paper.authors_raw || "Unknown author"}</span>
-                    <span>{paper.venue || "Venue unspecified"}</span>
+                    <span className="paper-foot-author">
+                      👤 {paper.first_author || paper.authors_raw || "Unknown author"}
+                    </span>
+                    <span>🏛️ {paper.venue || "Venue unspecified"}</span>
                     {paper.citation_count !== undefined && (
-                      <span><strong>{paper.citation_count.toLocaleString()}</strong> citations</span>
+                      <span className="citation-count-badge" title="Verified citation count">
+                        ⭐ {paper.citation_count.toLocaleString()} citations
+                      </span>
                     )}
                   </div>
                 </article>
@@ -325,18 +373,21 @@ export default function Home() {
             </div>
           )}
 
+          {/* Empty State */}
           {!papers.length && !selected && !busy && (
             <EmptyState
-              title="No papers loaded"
-              description="Enter a research topic above to search OpenAlex and the scientific corpus, or upload a PDF on the right."
-              icon="🔍"
+              title="No papers loaded yet"
+              description="Enter a research topic above to search OpenAlex and arXiv, or upload a private PDF on the right to start."
+              icon="📚"
             />
           )}
 
+          {/* Loading State */}
           {busy && !papers.length && (
-            <LoadingSpinner message="Searching scholarly literature databases..." size={36} />
+            <LoadingSpinner message="Searching scholarly literature databases..." size={38} />
           )}
 
+          {/* Active Workspace */}
           {selected && (
             <PaperWorkspace
               paper={selected}
@@ -348,43 +399,66 @@ export default function Home() {
               canAsk={canAsk}
               isProcessing={isPrivateUpload && jobStatus !== "COMPLETED" && selected.evidence_state === "processing"}
               jobProgress={jobProgress}
+              onBack={() => setSelected(null)}
             />
           )}
         </section>
 
+        {/* Right Column: Upload & Citation Policy */}
         <aside className="panel">
           <h2>Private Document</h2>
           <p className="panel-copy">
-            Upload an academic PDF for asynchronous extraction, chunking, and isolated evidence-backed Q&A.
+            Upload an academic PDF for asynchronous extraction, vector chunking, and isolated evidence-backed Q&A.
           </p>
 
           <label className="upload">
-            <strong>{busy ? "Uploading Document..." : "Upload Paper PDF"}</strong>
-            <span className="panel-copy" style={{ margin: "4px 0 0" }}>
+            <div className="upload-icon-box">☁️</div>
+            <strong>{busy ? "Uploading Document..." : "Upload Research PDF"}</strong>
+            <span style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>
               Magic bytes verified · Max 25 MB
             </span>
             <input type="file" accept="application/pdf" onChange={upload} disabled={busy} />
           </label>
 
+          {/* Real-Time Processing Progress */}
           {jobStatus && jobStatus !== "COMPLETED" && (
-            <div style={{ marginTop: 14 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
-                <span style={{ fontWeight: 600 }}>Extraction progress</span>
-                <span>{jobProgress}%</span>
+            <div style={{ marginTop: 18 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 6 }}>
+                <span style={{ fontWeight: 700, color: "var(--ink)" }}>Extracting & Indexing</span>
+                <span style={{ fontWeight: 700, color: "var(--primary)" }}>{jobProgress}%</span>
               </div>
-              <div style={{ background: "var(--line)", height: 6, borderRadius: 3, overflow: "hidden" }}>
-                <div style={{ width: `${jobProgress}%`, height: "100%", background: "var(--teal)", transition: "width 0.3s" }} />
+              <div style={{ background: "var(--border)", height: 7, borderRadius: 4, overflow: "hidden" }}>
+                <div
+                  style={{
+                    width: `${jobProgress}%`,
+                    height: "100%",
+                    background: "var(--primary-gradient)",
+                    transition: "width 0.3s ease",
+                  }}
+                />
               </div>
             </div>
           )}
 
-          <div style={{ marginTop: 24, borderTop: "1px solid var(--line)", paddingTop: 16 }}>
-            <h4 style={{ margin: "0 0 8px", fontSize: 12, textTransform: "uppercase", color: "var(--teal)" }}>
+          {/* Citation Policy Reassurance */}
+          <div style={{ marginTop: 24, borderTop: "1px solid var(--border)", paddingTop: 18 }}>
+            <h4 style={{ margin: "0 0 10px", fontSize: 12, textTransform: "uppercase", color: "var(--primary)", letterSpacing: "0.06em" }}>
               Citation Policy
             </h4>
-            <p style={{ fontSize: 12, color: "var(--muted)", margin: 0, lineHeight: 1.5 }}>
-              Lumen Research strictly requires type-specific evidence before answering. If a claim cannot be verified from the extracted text, the platform explicitly abstains.
-            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 12, color: "var(--ink-secondary)" }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+                <span>✅</span>
+                <span>Type-specific evidence required before answering</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+                <span>✅</span>
+                <span>Zero hallucination: strictly abstains on unmentioned facts</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+                <span>✅</span>
+                <span>Multi-tenant isolated storage in encrypted MinIO</span>
+              </div>
+            </div>
           </div>
         </aside>
       </div>
@@ -402,6 +476,7 @@ function PaperWorkspace({
   canAsk,
   isProcessing,
   jobProgress,
+  onBack,
 }: {
   paper: Paper;
   question: string;
@@ -412,24 +487,54 @@ function PaperWorkspace({
   canAsk: boolean;
   isProcessing: boolean;
   jobProgress: number;
+  onBack: () => void;
 }) {
+  const [activeTab, setActiveTab] = useState<"overview" | "chat">("chat");
   const analysis = paper.analysis;
 
   return (
     <section className="detail">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-        <div className="eyebrow">
-          {paper.source === "upload" ? "Private Library Paper" : "Scholarly Literature Match"}
-        </div>
+      {/* Top Header & Back Button */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <button
+          type="button"
+          className="secondary small-button"
+          onClick={onBack}
+          title="Back to search results"
+        >
+          ← Back to Results
+        </button>
         <StatusBadge state={paper.evidence_state} />
       </div>
 
-      <h2 style={{ fontSize: 24, margin: "0 0 10px" }}>{paper.title}</h2>
-      <p style={{ fontSize: 13, color: "var(--muted)", margin: "0 0 16px" }}>
-        {paper.authors_raw || "Unknown authors"} · {paper.venue || "Venue unspecified"} {paper.published_date ? `· ${paper.published_date}` : ""}
+      <h2 style={{ fontSize: 22, fontWeight: 800, margin: "0 0 8px", color: "var(--ink)" }}>
+        {paper.title}
+      </h2>
+      <p style={{ fontSize: 13, color: "var(--muted)", margin: "0 0 18px" }}>
+        👤 {paper.authors_raw || "Unknown authors"} · 🏛️ {paper.venue || "Venue unspecified"}{" "}
+        {paper.published_date ? `· 📅 ${paper.published_date}` : ""}
       </p>
 
-      {analysis && (
+      {/* Tab Controls */}
+      <div style={{ display: "flex", gap: 8, borderBottom: "1px solid var(--border)", paddingBottom: 12, marginBottom: 18 }}>
+        <button
+          type="button"
+          className={`nav-link ${activeTab === "chat" ? "active" : ""}`}
+          onClick={() => setActiveTab("chat")}
+        >
+          💬 Grounded AI Chat
+        </button>
+        <button
+          type="button"
+          className={`nav-link ${activeTab === "overview" ? "active" : ""}`}
+          onClick={() => setActiveTab("overview")}
+        >
+          📑 Structured Overview
+        </button>
+      </div>
+
+      {/* Overview Tab */}
+      {activeTab === "overview" && analysis && (
         <div className="detail-grid">
           <div className="detail-block">
             <h4>Summary</h4>
@@ -463,64 +568,75 @@ function PaperWorkspace({
       )}
 
       {isProcessing && (
-        <div className="notice" style={{ marginTop: 18 }}>
+        <div className="notice" style={{ margin: "16px 0" }}>
           <strong>Processing Document ({jobProgress}%):</strong> Extracting pages, generating vector embeddings, and structuring sections. Q&A will activate once indexing completes.
         </div>
       )}
 
-      <div style={{ marginTop: 28 }}>
-        <h3 style={{ fontSize: 18, font: "700 18px var(--font-serif)", margin: "0 0 12px" }}>
-          Grounded Evidence Q&A
-        </h3>
+      {/* Chat Tab */}
+      {activeTab === "chat" && (
+        <div>
+          {chatHistory.length > 0 ? (
+            <div className="chat-container">
+              {chatHistory.map((item, idx) => {
+                const isAssistant = item.role === "assistant";
+                const isInsufficient = item.status === "insufficient-evidence";
+                return (
+                  <div
+                    key={idx}
+                    className={`chat-bubble ${isAssistant ? "chat-assistant" : "chat-user"}`}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                      <strong style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.04em", opacity: 0.85 }}>
+                        {isAssistant ? "🤖 Lumen Research Assistant" : "👤 You"}
+                      </strong>
+                      {isAssistant && (
+                        <span className={`badge ${isInsufficient ? "badge-failed" : "badge-full-text"}`}>
+                          {isInsufficient ? "Abstained (Insufficient)" : "Evidence-Backed"}
+                        </span>
+                      )}
+                    </div>
 
-        {chatHistory.length > 0 && (
-          <div style={{ display: "grid", gap: 12, marginBottom: 18 }}>
-            {chatHistory.map((item, idx) => {
-              const isAssistant = item.role === "assistant";
-              const isInsufficient = item.status === "insufficient-evidence";
-              return (
-                <div
-                  key={idx}
-                  className={`answer-card ${isInsufficient ? "insufficient" : ""}`}
-                  style={{
-                    borderLeft: isAssistant ? (isInsufficient ? "4px solid var(--error)" : "4px solid var(--success)") : "4px solid var(--teal)",
-                  }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                    <strong style={{ fontSize: 12, textTransform: "uppercase", color: isAssistant ? "var(--teal)" : "var(--muted)" }}>
-                      {isAssistant ? "Lumen Verified Assistant" : "Researcher Query"}
-                    </strong>
-                    {isAssistant && (
-                      <span className={`badge ${isInsufficient ? "badge-failed" : "badge-full-text"}`}>
-                        {isInsufficient ? "Abstained (Insufficient)" : "Evidence-backed"}
-                      </span>
+                    <p style={{ margin: "4px 0", whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{item.content}</p>
+
+                    {item.evidence && item.evidence.length > 0 && (
+                      <div style={{ marginTop: 8 }}>
+                        <EvidenceDrawer evidence={item.evidence} />
+                      </div>
                     )}
                   </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div style={{ textAlign: "center", padding: "28px 16px", color: "var(--muted)", fontSize: 14 }}>
+              <div style={{ fontSize: 28, marginBottom: 8 }}>💡</div>
+              <strong>Ask any empirical question about this paper</strong>
+              <p style={{ fontSize: 13, margin: "4px 0 0" }}>
+                Ask about datasets, empirical accuracy, baseline models, mathematical formulas, or limitations.
+              </p>
+            </div>
+          )}
 
-                  <p style={{ margin: "4px 0", whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{item.content}</p>
-
-                  {item.evidence && item.evidence.length > 0 && (
-                    <EvidenceDrawer evidence={item.evidence} />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        <form className="qa" onSubmit={ask}>
-          <input
-            value={question}
-            onChange={e => setQuestion(e.target.value)}
-            placeholder={canAsk ? "Ask an empirical question (e.g. dataset, methodology, metrics, results)..." : "Waiting for document indexing..."}
-            disabled={!canAsk || asking}
-            aria-label="Ask paper a question"
-          />
-          <button className="primary" disabled={!canAsk || asking}>
-            {asking ? "Checking Evidence..." : "Ask"}
-          </button>
-        </form>
-      </div>
+          {/* Question Input Form */}
+          <form className="qa" onSubmit={ask} style={{ marginTop: 16 }}>
+            <input
+              value={question}
+              onChange={e => setQuestion(e.target.value)}
+              placeholder={
+                canAsk
+                  ? "Ask an empirical question grounded in this paper (e.g., What dataset was used?)..."
+                  : "Waiting for document indexing..."
+              }
+              disabled={!canAsk || asking}
+              aria-label="Ask paper a question"
+            />
+            <button className="primary" disabled={!canAsk || asking}>
+              {asking ? "Checking Evidence..." : "Ask AI"}
+            </button>
+          </form>
+        </div>
+      )}
     </section>
   );
 }

@@ -42,17 +42,63 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="auth-shell">
-      <div className="auth-card">
-        <div className="eyebrow">LUMEN RESEARCH</div>
-        <h1>Create Account</h1>
-        <p className="panel-copy">
-          Establish your private research workspace for isolated PDF vector indexing and synthesis.
-        </p>
+    <main
+      className="auth-shell"
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "24px",
+        background: "radial-gradient(ellipse at top, #eef2ff 0%, #f8fafc 60%, #f1f5f9 100%)",
+      }}
+    >
+      <div
+        className="auth-card"
+        style={{
+          width: "100%",
+          maxWidth: 440,
+          background: "var(--surface)",
+          border: "1px solid var(--line)",
+          borderRadius: "var(--radius-lg)",
+          padding: "36px 32px",
+          boxShadow: "0 20px 40px -15px rgba(79, 70, 229, 0.08), 0 0 1px 1px rgba(0, 0, 0, 0.04)",
+        }}
+      >
+        {/* Brand Header */}
+        <div style={{ textAlign: "center", marginBottom: 28 }}>
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 48,
+              height: 48,
+              borderRadius: "var(--radius-md)",
+              background: "linear-gradient(135deg, var(--primary) 0%, var(--primary-800) 100%)",
+              color: "#ffffff",
+              fontSize: 24,
+              boxShadow: "0 8px 16px -4px rgba(79, 70, 229, 0.35)",
+              marginBottom: 16,
+            }}
+          >
+            ⚛
+          </div>
+          <div className="eyebrow" style={{ letterSpacing: "0.08em", marginBottom: 6 }}>
+            LUMEN RESEARCH
+          </div>
+          <h1 style={{ fontSize: "1.75rem", fontWeight: 800, color: "var(--ink)", margin: "0 0 8px" }}>
+            Create Account
+          </h1>
+          <p className="panel-copy" style={{ margin: 0, fontSize: 13, color: "var(--ink-secondary)" }}>
+            Establish your private research workspace for isolated PDF vector indexing and grounded synthesis.
+          </p>
+        </div>
 
-        <form onSubmit={submit} className="auth-form">
-          <label>
-            Email Address
+        {/* Register Form */}
+        <form onSubmit={submit} className="auth-form" style={{ display: "grid", gap: 18 }}>
+          <label style={{ display: "grid", gap: 6, fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>
+            <span>Email Address</span>
             <input
               type="email"
               value={email}
@@ -60,12 +106,20 @@ export default function RegisterPage() {
               placeholder="researcher@university.edu"
               autoComplete="email"
               required
+              style={{
+                padding: "10px 14px",
+                fontSize: 14,
+                border: "1px solid var(--line)",
+                borderRadius: "var(--radius-sm)",
+                background: "var(--surface)",
+                color: "var(--ink)",
+              }}
             />
           </label>
 
-          <label>
-            Password
-            <div className="password-field">
+          <label style={{ display: "grid", gap: 6, fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>
+            <span>Password</span>
+            <div style={{ position: "relative" }}>
               <input
                 type={showPassword ? "text" : "password"}
                 value={password}
@@ -74,20 +128,39 @@ export default function RegisterPage() {
                 autoComplete="new-password"
                 minLength={8}
                 required
+                style={{
+                  width: "100%",
+                  padding: "10px 60px 10px 14px",
+                  fontSize: 14,
+                  border: "1px solid var(--line)",
+                  borderRadius: "var(--radius-sm)",
+                  background: "var(--surface)",
+                  color: "var(--ink)",
+                }}
               />
               <button
                 type="button"
-                className="link-button"
-                style={{ fontSize: 13 }}
                 onClick={() => setShowPassword(v => !v)}
+                style={{
+                  position: "absolute",
+                  right: 12,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "none",
+                  border: "none",
+                  color: "var(--ink-muted)",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
               >
                 {showPassword ? "Hide" : "Show"}
               </button>
             </div>
           </label>
 
-          <label>
-            Confirm Password
+          <label style={{ display: "grid", gap: 6, fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>
+            <span>Confirm Password</span>
             <input
               type={showPassword ? "text" : "password"}
               value={confirmPassword}
@@ -96,19 +169,58 @@ export default function RegisterPage() {
               autoComplete="new-password"
               minLength={8}
               required
+              style={{
+                padding: "10px 14px",
+                fontSize: 14,
+                border: "1px solid var(--line)",
+                borderRadius: "var(--radius-sm)",
+                background: "var(--surface)",
+                color: "var(--ink)",
+              }}
             />
           </label>
 
-          <button className="primary" disabled={busy}>
-            {busy ? "Setting up workspace..." : "Create workspace account"}
+          <button
+            type="submit"
+            className="primary"
+            disabled={busy}
+            style={{
+              padding: "12px",
+              fontSize: 14,
+              fontWeight: 700,
+              width: "100%",
+              marginTop: 6,
+              cursor: busy ? "not-allowed" : "pointer",
+            }}
+          >
+            {busy ? "Creating workspace..." : "Create Workspace Account"}
           </button>
         </form>
 
-        {error && <p className="error" role="alert">{error}</p>}
+        {error && (
+          <p
+            className="error"
+            role="alert"
+            style={{
+              marginTop: 16,
+              padding: "10px 14px",
+              borderRadius: "var(--radius-sm)",
+              fontSize: 13,
+            }}
+          >
+            {error}
+          </p>
+        )}
 
-        <p className="panel-copy" style={{ marginTop: 20 }}>
-          Already have an account? <Link href="/login" className="tool-link">Sign in</Link>
-        </p>
+        {/* Sign In Link */}
+        <div style={{ marginTop: 20, textAlign: "center", borderTop: "1px solid var(--line)", paddingTop: 18 }}>
+          <p style={{ margin: 0, fontSize: 13, color: "var(--ink-secondary)" }}>
+            Already have an account?{" "}
+            <Link href="/login" style={{ color: "var(--primary)", fontWeight: 600, textDecoration: "none" }}>
+              Sign in
+            </Link>
+          </p>
+        </div>
       </div>
     </main>
   );

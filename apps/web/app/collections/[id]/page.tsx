@@ -19,6 +19,7 @@ export default function CollectionDetail() {
   const [collection, setCollection] = useState<Collection | null>(null);
   const [papers, setPapers] = useState<WorkspacePaper[]>([]);
   const [name, setName] = useState("");
+  const [libraryFilter, setLibraryFilter] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -86,30 +87,75 @@ export default function CollectionDetail() {
   }
 
   const selectedSet = new Set(collection?.papers.map(p => p.id));
-  const availablePapers = papers.filter(p => !selectedSet.has(p.id));
+  const availablePapers = papers.filter(
+    p =>
+      !selectedSet.has(p.id) &&
+      (!libraryFilter.trim() ||
+        p.title.toLowerCase().includes(libraryFilter.toLowerCase()) ||
+        (p.authors_raw && p.authors_raw.toLowerCase().includes(libraryFilter.toLowerCase())))
+  );
 
   return (
     <main className="shell">
       <AppHeader />
 
+      {/* Back Link */}
       <div style={{ margin: "16px 0 8px" }}>
-        <Link href="/collections" className="link-button" style={{ fontSize: 13 }}>
-          &larr; Back to all collections
+        <Link
+          href="/collections"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            fontSize: 13,
+            fontWeight: 600,
+            color: "var(--primary-600)",
+            textDecoration: "none",
+          }}
+        >
+          <span>&larr;</span>
+          <span>Back to all collections</span>
         </Link>
       </div>
 
-      <section className="tool-hero" style={{ padding: "20px 0 24px" }}>
-        <div className="eyebrow">Project Collection</div>
-        <h1>{collection?.name || "Loading collection..."}</h1>
+      {/* Hero / Rename Section */}
+      <section className="tool-hero" style={{ padding: "16px 0 24px" }}>
+        <div className="eyebrow" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <span>📁</span> COLLECTION WORKSPACE
+        </div>
+        <h1 style={{ fontSize: "clamp(1.8rem, 3vw, 2.4rem)", marginTop: 6, marginBottom: 14 }}>
+          {collection?.name || "Loading Collection..."}
+        </h1>
 
-        <form className="search" onSubmit={rename} style={{ maxWidth: 540, marginTop: 12 }}>
+        {/* Rename Form */}
+        <form onSubmit={rename} style={{ display: "flex", gap: 10, maxWidth: 520 }}>
           <input
+            type="text"
             value={name}
             onChange={event => setName(event.target.value)}
             placeholder="Rename collection..."
             aria-label="Collection name"
+            style={{
+              flex: 1,
+              padding: "8px 14px",
+              fontSize: 13,
+              border: "1px solid var(--line)",
+              borderRadius: "var(--radius-sm)",
+              background: "var(--surface)",
+              color: "var(--ink)",
+            }}
           />
-          <button className="primary" disabled={busy || !name.trim()}>
+          <button
+            type="submit"
+            className="secondary small-button"
+            disabled={busy || !name.trim() || name === collection?.name}
+            style={{
+              padding: "8px 14px",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
             {busy ? "Saving..." : "Rename"}
           </button>
         </form>
@@ -118,78 +164,234 @@ export default function CollectionDetail() {
       {error && <p className="error" role="alert">{error}</p>}
 
       {loading ? (
-        <LoadingSpinner message="Loading collection papers..." />
+        <div style={{ padding: "80px 0" }}>
+          <LoadingSpinner message="Loading collection papers..." />
+        </div>
       ) : (
-        <div className="collection-detail-grid">
-          <section>
-            <div className="section-head">
-              <h2>Included in Collection</h2>
-              <span className="count">{collection?.papers.length ?? 0} papers</span>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
+            gap: 24,
+            alignItems: "start",
+          }}
+        >
+          {/* Column 1: Papers in Collection */}
+          <section
+            style={{
+              background: "var(--surface)",
+              border: "1px solid var(--line)",
+              borderRadius: "var(--radius-md)",
+              padding: "20px 24px",
+              boxShadow: "var(--shadow-sm)",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <h2 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, color: "var(--ink)" }}>
+                  In this Collection
+                </h2>
+                <span
+                  style={{
+                    padding: "2px 8px",
+                    borderRadius: "9999px",
+                    background: "var(--primary-50)",
+                    color: "var(--primary-700)",
+                    fontSize: 12,
+                    fontWeight: 700,
+                  }}
+                >
+                  {collection?.papers.length ?? 0}
+                </span>
+              </div>
             </div>
 
-            <div style={{ display: "grid", gap: 10 }}>
+            <div style={{ display: "grid", gap: 12 }}>
               {collection?.papers.length ? (
                 collection.papers.map(paper => (
-                  <article className="collection-row" key={paper.id}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
-                        <strong>{paper.title}</strong>
-                        <StatusBadge state={paper.evidence_state} />
+                  <article
+                    key={paper.id}
+                    style={{
+                      border: "1px solid var(--line)",
+                      borderRadius: "var(--radius-sm)",
+                      padding: "14px 16px",
+                      background: "var(--surface)",
+                      boxShadow: "var(--shadow-sm)",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 8,
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                      <div style={{ flex: 1 }}>
+                        <h4 style={{ margin: "0 0 4px", fontSize: 14, fontWeight: 700 }}>
+                          <Link href={`/?paper=${paper.id}`} style={{ color: "var(--ink)", textDecoration: "none" }}>
+                            {paper.title}
+                          </Link>
+                        </h4>
+                        <div style={{ fontSize: 12, color: "var(--ink-muted)" }}>
+                          {paper.authors_raw || "Unknown authors"} · {paper.year || "n/a"}
+                        </div>
                       </div>
-                      <small style={{ color: "var(--muted)" }}>{paper.authors_raw || "Unknown authors"}</small>
+                      <StatusBadge state={paper.evidence_state} />
                     </div>
-                    <button
-                      type="button"
-                      className="link-button"
-                      style={{ color: "var(--error)", fontSize: 13 }}
-                      onClick={() => remove(paper.id)}
-                      disabled={busy}
+
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        borderTop: "1px solid var(--slate-100)",
+                        paddingTop: 8,
+                      }}
                     >
-                      Remove
-                    </button>
+                      <Link
+                        href={`/?paper=${paper.id}`}
+                        style={{ fontSize: 12, fontWeight: 600, color: "var(--primary-600)", textDecoration: "none" }}
+                      >
+                        Open Desk &rarr;
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => remove(paper.id)}
+                        disabled={busy}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "var(--error)",
+                          fontSize: 12,
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          padding: "2px 6px",
+                        }}
+                      >
+                        Remove from set
+                      </button>
+                    </div>
                   </article>
                 ))
               ) : (
                 <EmptyState
-                  title="Empty collection"
-                  description="Add papers from your library on the right to populate this collection."
+                  title="Empty Collection"
+                  description="No papers in this collection yet. Add papers from your library on the right."
                   icon="📄"
                 />
               )}
             </div>
           </section>
 
-          <section>
-            <div className="section-head">
-              <h2>Add from Library</h2>
-              <span className="count">{availablePapers.length} available</span>
+          {/* Column 2: Available from Library */}
+          <section
+            style={{
+              background: "var(--surface)",
+              border: "1px solid var(--line)",
+              borderRadius: "var(--radius-md)",
+              padding: "20px 24px",
+              boxShadow: "var(--shadow-sm)",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <h2 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, color: "var(--ink)" }}>
+                  Add from Library
+                </h2>
+                <span
+                  style={{
+                    padding: "2px 8px",
+                    borderRadius: "9999px",
+                    background: "var(--slate-100)",
+                    color: "var(--ink-muted)",
+                    fontSize: 12,
+                    fontWeight: 700,
+                  }}
+                >
+                  {availablePapers.length}
+                </span>
+              </div>
             </div>
 
-            <div style={{ display: "grid", gap: 10 }}>
+            {/* Quick search filter for library papers */}
+            <div style={{ marginBottom: 14 }}>
+              <input
+                type="text"
+                value={libraryFilter}
+                onChange={e => setLibraryFilter(e.target.value)}
+                placeholder="Search library papers..."
+                style={{
+                  width: "100%",
+                  padding: "8px 12px",
+                  fontSize: 13,
+                  border: "1px solid var(--line)",
+                  borderRadius: "var(--radius-sm)",
+                  background: "var(--slate-50)",
+                  color: "var(--ink)",
+                }}
+              />
+            </div>
+
+            <div style={{ display: "grid", gap: 12 }}>
               {availablePapers.length ? (
                 availablePapers.map(paper => (
-                  <article className="collection-row" key={paper.id}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
-                        <strong>{paper.title}</strong>
-                        <StatusBadge state={paper.evidence_state} />
+                  <article
+                    key={paper.id}
+                    style={{
+                      border: "1px solid var(--line)",
+                      borderRadius: "var(--radius-sm)",
+                      padding: "14px 16px",
+                      background: "var(--surface)",
+                      boxShadow: "var(--shadow-sm)",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 8,
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                      <div style={{ flex: 1 }}>
+                        <h4 style={{ margin: "0 0 4px", fontSize: 14, fontWeight: 700, color: "var(--ink)" }}>
+                          {paper.title}
+                        </h4>
+                        <div style={{ fontSize: 12, color: "var(--ink-muted)" }}>
+                          {paper.authors_raw || "Unknown"} · {paper.year || "n/a"}
+                        </div>
                       </div>
-                      <small style={{ color: "var(--muted)" }}>{paper.authors_raw || "Unknown authors"}</small>
+                      <StatusBadge state={paper.evidence_state} />
                     </div>
-                    <button
-                      type="button"
-                      className="primary small-button"
-                      onClick={() => add(paper.id)}
-                      disabled={busy}
+
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "flex-end",
+                        borderTop: "1px solid var(--slate-100)",
+                        paddingTop: 8,
+                      }}
                     >
-                      Add to set
-                    </button>
+                      <button
+                        type="button"
+                        className="primary small-button"
+                        onClick={() => add(paper.id)}
+                        disabled={busy}
+                        style={{
+                          padding: "6px 14px",
+                          fontSize: 12,
+                          fontWeight: 600,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 4,
+                        }}
+                      >
+                        <span>+ Add to set</span>
+                      </button>
+                    </div>
                   </article>
                 ))
               ) : (
                 <EmptyState
-                  title="All library papers included"
-                  description="Upload new papers or search literature to expand your collection."
+                  title="All papers included"
+                  description={
+                    libraryFilter
+                      ? `No library papers matched "${libraryFilter}".`
+                      : "All papers in your library are currently added to this collection."
+                  }
                   icon="✨"
                 />
               )}

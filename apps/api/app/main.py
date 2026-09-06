@@ -695,10 +695,16 @@ async def search(request: SearchRequest) -> dict[str, Any]:
         for paper in papers:
             external_id = str(paper.get("doi") or paper.get("id") or paper.get("title"))
             stored = (
-                await session.execute(
-                    select(Paper).where(Paper.external_id == external_id).order_by(Paper.created_at.desc())
+                (
+                    await session.execute(
+                        select(Paper)
+                        .where(Paper.external_id == external_id)
+                        .order_by(Paper.created_at.desc())
+                    )
                 )
-            ).scalars().first()
+                .scalars()
+                .first()
+            )
             if not stored:
                 state = "processing" if paper.get("pdf_url") else "metadata-only"
                 stored = Paper(
