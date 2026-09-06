@@ -28,7 +28,9 @@ def generate_research_paper_pdf() -> bytes:
 
     # Page 1: Title, Abstract, Introduction, Methodology
     page1 = doc.new_page()
-    page1.insert_text((50, 50), "Quantum Neural Kernels for Graph-Structured Representation Learning", fontsize=15)
+    page1.insert_text(
+        (50, 50), "Quantum Neural Kernels for Graph-Structured Representation Learning", fontsize=15
+    )
     page1.insert_text(
         (50, 85),
         "Authors: Dr. Evelyn Vance, Dr. Tariq Al-Mansoor, Prof. Elena Rostova\n"
@@ -119,7 +121,9 @@ async def verify_all_system_cases() -> None:
         storage_ok = ready_json["checks"]["storage"]
 
         print(f"  ✓ /health: {resp_health.json()['status']}")
-        print(f"  ✓ /readiness: PostgreSQL={db_ok}, Redis={redis_ok}, MinIO Storage={storage_ok} ({probe_ms:.1f}ms)")
+        print(
+            f"  ✓ /readiness: PostgreSQL={db_ok}, Redis={redis_ok}, MinIO Storage={storage_ok} ({probe_ms:.1f}ms)"
+        )
         results["Case 1 (Readiness Probes)"] = db_ok and redis_ok and storage_ok
 
         # -------------------------------------------------------------
@@ -162,10 +166,12 @@ async def verify_all_system_cases() -> None:
         search_data = search_resp.json()
         papers_found = search_data.get("papers", [])
 
-        print(f"  ✓ Query: '{search_query}' -> {len(papers_found)} papers retrieved ({search_ms:.1f}ms)")
+        print(
+            f"  ✓ Query: '{search_query}' -> {len(papers_found)} papers retrieved ({search_ms:.1f}ms)"
+        )
         if papers_found:
             top_paper = papers_found[0]
-            print(f"  ✓ Top Match: \"{top_paper['title'][:65]}...\"")
+            print(f'  ✓ Top Match: "{top_paper["title"][:65]}..."')
             print(f"    Source: {top_paper.get('source')} | Venue: {top_paper.get('venue', 'N/A')}")
         results["Case 3 (Federated Search)"] = len(papers_found) > 0
 
@@ -199,7 +205,9 @@ async def verify_all_system_cases() -> None:
             jdata = job_resp.json()
             if jdata["status"] == "COMPLETED":
                 completed = True
-                print(f"  ✓ Background Ingestion Succeeded in {i + 1}s (Progress: {jdata.get('progress', 100)}%)")
+                print(
+                    f"  ✓ Background Ingestion Succeeded in {i + 1}s (Progress: {jdata.get('progress', 100)}%)"
+                )
                 break
             elif jdata["status"] == "FAILED":
                 raise RuntimeError(f"Ingestion job failed: {jdata.get('error')}")
@@ -210,7 +218,7 @@ async def verify_all_system_cases() -> None:
         paper_get = await client.get(f"{API_BASE}/api/papers/{paper_id}", headers=headers)
         assert paper_get.status_code == 200
         paper_info = paper_get.json()
-        print(f"  ✓ Title Extracted: \"{paper_info['title']}\"")
+        print(f'  ✓ Title Extracted: "{paper_info["title"]}"')
         print(f"  ✓ Evidence State: '{paper_info['evidence_state']}' (Full-Text Verified)")
         results["Case 4 (Upload & Indexing)"] = paper_info["evidence_state"] == "full-text"
 
@@ -229,9 +237,9 @@ async def verify_all_system_cases() -> None:
         assert qa1_resp.status_code == 200
         qa1_data = qa1_resp.json()
 
-        print(f"  [Q]: \"{q1}\"")
+        print(f'  [Q]: "{q1}"')
         print(f"  [Status]: {qa1_data['status']} ({qa1_ms:.1f}ms)")
-        print(f"  [Answer]: \"{qa1_data['answer'][:120]}...\"")
+        print(f'  [Answer]: "{qa1_data["answer"][:120]}..."')
 
         # Verify factual accuracy
         answer_text = qa1_data["answer"].lower()
@@ -260,9 +268,9 @@ async def verify_all_system_cases() -> None:
         assert qa2_resp.status_code == 200
         qa2_data = qa2_resp.json()
 
-        print(f"  [Q]: \"{q2}\"")
+        print(f'  [Q]: "{q2}"')
         print(f"  [Status]: {qa2_data['status']}")
-        print(f"  [Answer]: \"{qa2_data['answer'][:120]}...\"")
+        print(f'  [Answer]: "{qa2_data["answer"][:120]}..."')
         a2_text = qa2_data["answer"].lower()
         has_gradient = "gradient" in a2_text or "natural gradient" in a2_text or "fisher" in a2_text
         print(f"  ✓ Methodology Correctly Grounded: {has_gradient}")
@@ -281,10 +289,13 @@ async def verify_all_system_cases() -> None:
         assert qa3_resp.status_code == 200
         qa3_data = qa3_resp.json()
 
-        print(f"  [Q - Unmentioned Fact]: \"{q_fake}\"")
+        print(f'  [Q - Unmentioned Fact]: "{q_fake}"')
         print(f"  [Status]: {qa3_data['status']}")
-        print(f"  [Response]: \"{qa3_data['answer'][:100]}...\"")
-        abstained = qa3_data["status"] == "insufficient-evidence" or "insufficient" in qa3_data["answer"].lower()
+        print(f'  [Response]: "{qa3_data["answer"][:100]}..."')
+        abstained = (
+            qa3_data["status"] == "insufficient-evidence"
+            or "insufficient" in qa3_data["answer"].lower()
+        )
         print(f"  ✓ Faithfully Abstained (Zero False Claim): {abstained}")
         results["Case 7 (Anti-Hallucination Abstention)"] = abstained
 
@@ -296,25 +307,34 @@ async def verify_all_system_cases() -> None:
         chat_turn1 = await client.post(
             f"{API_BASE}/api/chat",
             headers=headers,
-            json={"paper_id": paper_id, "question": "What are the node counts of the Cora, Citeseer, and PubMed datasets evaluated in this study?"},
+            json={
+                "paper_id": paper_id,
+                "question": "What are the node counts of the Cora, Citeseer, and PubMed datasets evaluated in this study?",
+            },
         )
         assert chat_turn1.status_code == 200, f"Chat turn 1 failed: {chat_turn1.text}"
         c1_data = chat_turn1.json()
         session_id = c1_data["session_id"]
         print(f"  ✓ Turn 1 Chat Session ID: {session_id}")
-        print(f"  ✓ Assistant: \"{c1_data['answer'][:95]}...\"")
+        print(f'  ✓ Assistant: "{c1_data["answer"][:95]}..."')
         print(f"  ✓ Citations Attached: {len(c1_data.get('citations', []))} items")
 
         # Turn 2 (Follow-up query using session_id)
         chat_turn2 = await client.post(
             f"{API_BASE}/api/chat",
             headers=headers,
-            json={"paper_id": paper_id, "session_id": session_id, "question": "What test classification accuracy did QNK achieve on the Cora and Citeseer benchmarks?"},
+            json={
+                "paper_id": paper_id,
+                "session_id": session_id,
+                "question": "What test classification accuracy did QNK achieve on the Cora and Citeseer benchmarks?",
+            },
         )
         assert chat_turn2.status_code == 200, f"Chat turn 2 failed: {chat_turn2.text}"
         c2_data = chat_turn2.json()
-        print(f"  ✓ Turn 2 Follow-up Assistant: \"{c2_data['answer'][:95]}...\"")
-        results["Case 8 (Interactive Chat Session)"] = bool(session_id) and len(c1_data.get("citations", [])) > 0
+        print(f'  ✓ Turn 2 Follow-up Assistant: "{c2_data["answer"][:95]}..."')
+        results["Case 8 (Interactive Chat Session)"] = (
+            bool(session_id) and len(c1_data.get("citations", [])) > 0
+        )
 
         # -------------------------------------------------------------
         # Case 9: Research Collections Management
@@ -370,7 +390,10 @@ async def verify_all_system_cases() -> None:
                 "citation_count": 89,
             },
         ]
-        tool_payload = {"topic": "Quantum vs Classical Graph Machine Learning", "papers": chosen_papers}
+        tool_payload = {
+            "topic": "Quantum vs Classical Graph Machine Learning",
+            "papers": chosen_papers,
+        }
 
         # Tool 1: Compare
         t_comp = await client.post(f"{API_BASE}/api/compare", headers=headers, json=tool_payload)
@@ -380,27 +403,41 @@ async def verify_all_system_cases() -> None:
         # Tool 2: Trends
         t_trend = await client.post(f"{API_BASE}/api/trends", headers=headers, json=tool_payload)
         assert t_trend.status_code == 200
-        print(f"  ✓ 2. Research Trajectory: Keywords -> {t_trend.json().get('emerging_keywords', [])[:3]}")
+        print(
+            f"  ✓ 2. Research Trajectory: Keywords -> {t_trend.json().get('emerging_keywords', [])[:3]}"
+        )
 
         # Tool 3: Gaps
-        t_gaps = await client.post(f"{API_BASE}/api/research-gaps", headers=headers, json=tool_payload)
+        t_gaps = await client.post(
+            f"{API_BASE}/api/research-gaps", headers=headers, json=tool_payload
+        )
         assert t_gaps.status_code == 200
-        print(f"  ✓ 3. Research Gaps: {len(t_gaps.json().get('evidence_based_findings', []))} gap finding(s)")
+        print(
+            f"  ✓ 3. Research Gaps: {len(t_gaps.json().get('evidence_based_findings', []))} gap finding(s)"
+        )
 
         # Tool 4: Ideas
-        t_ideas = await client.post(f"{API_BASE}/api/research-ideas", headers=headers, json=tool_payload)
+        t_ideas = await client.post(
+            f"{API_BASE}/api/research-ideas", headers=headers, json=tool_payload
+        )
         assert t_ideas.status_code == 200
-        print(f"  ✓ 4. Novel Directions: Generated '{t_ideas.json().get('ideas', [{}])[0].get('title', 'N/A')}'")
+        print(
+            f"  ✓ 4. Novel Directions: Generated '{t_ideas.json().get('ideas', [{}])[0].get('title', 'N/A')}'"
+        )
 
         # Tool 5: Proposal
         t_prop = await client.post(f"{API_BASE}/api/proposals", headers=headers, json=tool_payload)
         assert t_prop.status_code == 200
-        print(f"  ✓ 5. Academic Proposal: Drafted \"{t_prop.json().get('title')}\"")
+        print(f'  ✓ 5. Academic Proposal: Drafted "{t_prop.json().get("title")}"')
 
         # Tool 6: Similarity Map
-        t_sim = await client.post(f"{API_BASE}/api/similarity-map", headers=headers, json=tool_payload)
+        t_sim = await client.post(
+            f"{API_BASE}/api/similarity-map", headers=headers, json=tool_payload
+        )
         assert t_sim.status_code == 200
-        print(f"  ✓ 6. Similarity Network: {len(t_sim.json().get('nodes', []))} nodes, {len(t_sim.json().get('edges', []))} edges")
+        print(
+            f"  ✓ 6. Similarity Network: {len(t_sim.json().get('nodes', []))} nodes, {len(t_sim.json().get('edges', []))} edges"
+        )
         results["Case 10 (6 Research Tools)"] = True
 
         # -------------------------------------------------------------
