@@ -16,12 +16,15 @@ ANALYSIS_SCHEMA = (
 )
 
 
+from apps.api.app.services.text_normalization import (
+    normalize_extracted_text,
+    validate_text_for_persistence,
+)
+
+
 def clean_extracted_text(text: str) -> str:
-    """Clean encoded text artifacts from PDF extraction."""
-    try:
-        return text.encode("latin1").decode("utf-8")
-    except UnicodeError:
-        return text
+    """Clean encoded text artifacts from PDF extraction using centralized normalization."""
+    return normalize_extracted_text(text)
 
 
 def extract_uploaded_title(text: str, filename: str) -> str:

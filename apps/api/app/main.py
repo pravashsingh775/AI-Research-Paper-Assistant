@@ -97,11 +97,14 @@ DATASET_PATH = Path(__file__).resolve().parents[3] / "data" / "processed" / "arx
 MAX_UPLOAD_BYTES = 15 * 1024 * 1024
 
 
+from apps.api.app.services.text_normalization import (
+    normalize_extracted_text,
+    validate_text_for_persistence,
+)
+
+
 def _clean_extracted_text(text: str) -> str:
-    try:
-        return text.encode("latin1").decode("utf-8")
-    except UnicodeError:
-        return text
+    return normalize_extracted_text(text)
 
 
 def _uploaded_title(text: str, filename: str) -> str:
@@ -862,11 +865,14 @@ async def _process_paper_job(
     title: str,
     text: str,
 ) -> None:
-    async with SessionFactory() as session:
-        job = await session.get(BackgroundJob, job_id)
-        if not job:
-            return
-        try:
+    norm_title = normalize_extracted_text(title)
+    norm_text = normalize_extracted_text(text)
+
+    try:
+        async with SessionFactory() as session:
+            job = await session.get(BackgroundJob, job_id)
+            if not job:
+                return
             job.status, job.progress, job.started_at = (
                 "PROCESSING",
                 35,
@@ -879,6 +885,7 @@ async def _process_paper_job(
                     )
                 )
             ).scalar_one()
+            document.content = norm_text
             indexed = (
                 await session.execute(
                     select(DocumentChunk.id)
@@ -891,16 +898,16 @@ async def _process_paper_job(
                     session.add(
                         DocumentChunk(
                             document_id=document.id,
-                            text=chunk.text,
-                            section=chunk.section,
+                            text=normalize_extracted_text(chunk.text),
+                            section=normalize_extracted_text(chunk.section) if chunk.section else "Body",
                             page=chunk.page,
                             chunk_index=chunk.index,
                             embedding=chunk.embedding,
                         )
                     )
             job.progress = 70
-            analysis = await _model_analysis(title, text, "extracted PDF text") or _analysis(
-                title, text, "extracted PDF text"
+            analysis = await _model_analysis(norm_title, norm_text, "extracted PDF text") or _analysis(
+                norm_title, norm_text, "extracted PDF text"
             )
             session.add(
                 PaperAnalysis(
@@ -913,6 +920,9 @@ async def _process_paper_job(
             paper_rec = await session.get(Paper, paper_id)
             if paper_rec:
                 paper_rec.evidence_state = "full-text"
+                if norm_title:
+                    paper_rec.title = norm_title
+                paper_rec.abstract = norm_text[:10000]
             job.result = {"paper_id": str(paper_id), "analysis": analysis}
             job.status, job.progress, job.completed_at = (
                 "COMPLETED",
@@ -920,12 +930,25 @@ async def _process_paper_job(
                 datetime.now(timezone.utc),
             )
             await session.commit()
-        except Exception as error:
-            job.status, job.error = (
-                "FAILED",
-                "Paper processing failed: " + str(error)[:300],
+    except Exception as error:
+        logging.getLogger("main").error(
+            f"Paper processing failed for job {job_id}: {error}", exc_info=True
+        )
+        try:
+            async with SessionFactory() as fail_session:
+                fail_job = await fail_session.get(BackgroundJob, job_id)
+                if fail_job:
+                    fail_job.status = "FAILED"
+                    fail_job.error = "Paper processing failed: " + str(error)[:300]
+                    fail_job.completed_at = datetime.now(timezone.utc)
+                fail_paper = await fail_session.get(Paper, paper_id)
+                if fail_paper:
+                    fail_paper.evidence_state = EvidenceState.FAILED.value
+                await fail_session.commit()
+        except Exception as record_err:
+            logging.getLogger("main").error(
+                f"Failed recording job failure state for {job_id}: {record_err}"
             )
-            await session.commit()
 
 
 @app.get("/api/papers/{paper_id}")

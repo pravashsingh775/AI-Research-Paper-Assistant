@@ -174,3 +174,4 @@ To launch the complete platform in a single click:
 - **Liveness Probe:** `http://localhost:8000/liveness`
 - **Readiness Probe:** `http://localhost:8000/readiness`
 - **MinIO Console:** `http://localhost:9001` (User: `minio` / Pass: `miniosecret`)
+

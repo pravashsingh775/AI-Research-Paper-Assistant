@@ -35,6 +35,10 @@ from apps.api.app.services.analysis import (
 )
 from apps.api.app.services.queue import QUEUE_NAME
 from apps.api.app.services.rag import Chunk, chunk_text
+from apps.api.app.services.text_normalization import (
+    normalize_extracted_text,
+    validate_text_for_persistence,
+)
 
 logger = logging.getLogger("worker")
 logging.basicConfig(
@@ -96,18 +100,42 @@ async def consume() -> None:
     logger.info("Background worker stopped gracefully.")
 
 
+async def _mark_job_failed(job_id: UUID, paper_id: UUID, error_message: str) -> None:
+    """Record job and paper failure in an isolated, clean database session.
+
+    Guarantees no PendingRollbackError cascade from the failed processing transaction.
+    """
+    try:
+        async with SessionFactory() as fail_session:
+            job = await fail_session.get(BackgroundJob, job_id)
+            if job:
+                job.status = "FAILED"
+                job.error = error_message[:500]
+                job.completed_at = datetime.now(timezone.utc)
+            paper = await fail_session.get(Paper, paper_id)
+            if paper:
+                paper.evidence_state = EvidenceState.FAILED.value
+            await fail_session.commit()
+            logger.info(f"Successfully recorded FAILED state for job {job_id} (paper: {paper_id}).")
+    except Exception as record_exc:
+        logger.error(
+            f"Critical failure recording FAILED state for job {job_id}: {record_exc}",
+            exc_info=True,
+        )
+
+
 async def process(payload: dict[str, Any]) -> None:
     job_id = UUID(payload["job_id"])
     paper_id = UUID(payload["paper_id"])
     job_type = payload.get("job_type", "PAPER_PROCESSING")
 
-    async with SessionFactory() as session:
-        job = await session.get(BackgroundJob, job_id)
-        if not job:
-            logger.warning(f"Job {job_id} not found in database.")
-            return
+    try:
+        async with SessionFactory() as session:
+            job = await session.get(BackgroundJob, job_id)
+            if not job:
+                logger.warning(f"Job {job_id} not found in database.")
+                return
 
-        try:
             if job_type == "CORPUS_FULL_TEXT_INGESTION":
                 await _ingest_corpus_full_text(session, job, paper_id)
             elif job_type == "PAPER_PROCESSING":
@@ -120,14 +148,9 @@ async def process(payload: dict[str, Any]) -> None:
                 job.status = "FAILED"
                 job.error = f"Unsupported job type: {job_type}"
                 await session.commit()
-        except Exception as exc:
-            logger.error(f"Failed processing job {job_id}: {exc}", exc_info=True)
-            paper = await session.get(Paper, paper_id)
-            if paper:
-                paper.evidence_state = EvidenceState.FAILED.value
-            job.status = "FAILED"
-            job.error = str(exc)[:300]
-            await session.commit()
+    except Exception as exc:
+        logger.error(f"Failed processing job {job_id}: {exc}", exc_info=True)
+        await _mark_job_failed(job_id, paper_id, str(exc))
 
 
 async def _process_uploaded_pdf(
@@ -167,7 +190,13 @@ async def _process_uploaded_pdf(
 
     # Extract pages and text
     pdf = fitz.open(stream=pdf_bytes, filetype="pdf")
-    page_texts = [clean_extracted_text(page.get_text()).strip() for page in pdf]
+    page_texts: list[str] = []
+    for page in pdf:
+        raw_page_text = page.get_text()
+        normalized_page = normalize_extracted_text(
+            raw_page_text, document_id=str(document.id), job_id=str(job.id)
+        )
+        page_texts.append(normalized_page.strip())
     page_count = len(pdf)
     pdf.close()
 
@@ -175,16 +204,21 @@ async def _process_uploaded_pdf(
     if not full_text:
         raise ValueError("PDF contains no extractable text.")
 
+    # Validation boundary before database persistence
+    valid, err_msg = validate_text_for_persistence(full_text)
+    if not valid:
+        raise ValueError(f"Extracted document text failed database validation: {err_msg}")
+
     document.content = full_text
     document.page_count = page_count
 
     # Update paper title if default or fallback
     extracted_title = extract_uploaded_title(full_text, document.filename)
-    if extracted_title and (
-        not paper.title or paper.title in ("Uploaded paper", document.filename)
-    ):
-        paper.title = extracted_title
-    paper.abstract = full_text[:10000]
+    if extracted_title:
+        extracted_title = normalize_extracted_text(extracted_title)
+        if not paper.title or paper.title in ("Uploaded paper", document.filename):
+            paper.title = extracted_title
+    paper.abstract = normalize_extracted_text(full_text[:10000])
 
     job.progress = 50
     await session.commit()
@@ -194,11 +228,15 @@ async def _process_uploaded_pdf(
     chunk_index = 0
     for page_no, page_text in enumerate(page_texts, start=1):
         for chunk in chunk_text(page_text, page_no):
+            norm_chunk_text = normalize_extracted_text(chunk.text)
+            norm_section = (
+                normalize_extracted_text(chunk.section) if chunk.section else "Body"
+            )
             chunks.append(
                 Chunk(
-                    text=chunk.text,
+                    text=norm_chunk_text,
                     page=page_no,
-                    section=chunk.section,
+                    section=norm_section,
                     index=chunk_index,
                     embedding=chunk.embedding,
                 )
@@ -306,7 +344,13 @@ async def _ingest_corpus_full_text(
     await storage.put(object_key, content, content_type="application/pdf")
 
     pdf = fitz.open(stream=content, filetype="pdf")
-    page_texts = [clean_extracted_text(page.get_text()).strip() for page in pdf]
+    page_texts: list[str] = []
+    for page in pdf:
+        raw_page_text = page.get_text()
+        normalized_page = normalize_extracted_text(
+            raw_page_text, document_id=None, job_id=str(job.id)
+        )
+        page_texts.append(normalized_page.strip())
     page_count = len(pdf)
     pdf.close()
 
@@ -314,15 +358,24 @@ async def _ingest_corpus_full_text(
     if not full_text:
         raise ValueError("PDF has no extractable text.")
 
+    # Validation boundary before database persistence
+    valid, err_msg = validate_text_for_persistence(full_text)
+    if not valid:
+        raise ValueError(f"Corpus document text failed database validation: {err_msg}")
+
     chunks: list[Chunk] = []
     chunk_index = 0
     for page_no, page_text in enumerate(page_texts, start=1):
         for chunk in chunk_text(page_text, page_no):
+            norm_chunk_text = normalize_extracted_text(chunk.text)
+            norm_section = (
+                normalize_extracted_text(chunk.section) if chunk.section else "Body"
+            )
             chunks.append(
                 Chunk(
-                    text=chunk.text,
+                    text=norm_chunk_text,
                     page=page_no,
-                    section=chunk.section,
+                    section=norm_section,
                     index=chunk_index,
                     embedding=chunk.embedding,
                 )
