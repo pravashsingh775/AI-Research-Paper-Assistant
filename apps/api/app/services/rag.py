@@ -220,10 +220,15 @@ QUESTION_SIGNALS: dict[str, set[str]] = {
         "data",
         "corpus",
         "benchmark",
+        "benchmarks",
         "participants",
         "samples",
         "records",
         "subjects",
+        "chromosome",
+        "chromosomes",
+        "genome",
+        "partitions",
     },
     "methodology": {
         "method",
@@ -232,6 +237,13 @@ QUESTION_SIGNALS: dict[str, set[str]] = {
         "procedure",
         "pipeline",
         "technique",
+        "attention",
+        "window",
+        "landmark",
+        "landmarks",
+        "tokens",
+        "triplets",
+        "quantization",
     },
     "preprocessing": {
         "preprocess",
@@ -243,21 +255,28 @@ QUESTION_SIGNALS: dict[str, set[str]] = {
     },
     "model": {
         "model",
+        "models",
         "architecture",
         "network",
+        "networks",
         "algorithm",
         "encoder",
+        "encoders",
         "transformer",
+        "transformers",
         "llm",
         "backbone",
+        "convolution",
     },
     "training": {
         "training",
         "trained",
         "optimizer",
         "epoch",
+        "epochs",
         "learning",
         "hyperparameter",
+        "hyperparameters",
         "loss",
     },
     "evaluation": {
@@ -270,6 +289,8 @@ QUESTION_SIGNALS: dict[str, set[str]] = {
         "recall",
         "f1",
         "auc",
+        "auroc",
+        "auprc",
         "bleu",
         "rouge",
         "rmse",
@@ -282,7 +303,10 @@ QUESTION_SIGNALS: dict[str, set[str]] = {
         "performance",
         "improvement",
         "outperform",
+        "outperforms",
         "achieve",
+        "achieves",
+        "achieved",
     },
     "strengths": {
         "strength",
@@ -292,6 +316,12 @@ QUESTION_SIGNALS: dict[str, set[str]] = {
         "contribution",
         "contributions",
         "benefit",
+        "benefits",
+        "scales",
+        "guarantee",
+        "guarantees",
+        "preserve",
+        "preserves",
     },
     "limitations": {
         "limitation",
@@ -299,10 +329,74 @@ QUESTION_SIGNALS: dict[str, set[str]] = {
         "weakness",
         "weaknesses",
         "drawback",
+        "drawbacks",
         "bottleneck",
+        "bottlenecks",
+        "overhead",
+        "consumption",
+        "latency",
+        "noisy",
+        "incomplete",
+        "battery",
     },
-    "future_work": {"future", "future work", "next", "directions"},
+    "future_work": {
+        "future",
+        "future work",
+        "next",
+        "directions",
+        "discovery",
+        "refinement",
+    },
     "metadata": {"author", "authors", "year", "venue", "journal", "conference"},
+}
+
+GENERIC_QUESTION_TERMS: set[str] = {
+    "used",
+    "use",
+    "using",
+    "study",
+    "paper",
+    "main",
+    "primary",
+    "work",
+    "author",
+    "authors",
+    "what",
+    "which",
+    "how",
+    "many",
+    "much",
+    "achieve",
+    "achieves",
+    "achieved",
+    "provide",
+    "provides",
+    "reported",
+    "describe",
+    "describes",
+    "find",
+    "findings",
+    "show",
+    "shows",
+    "propose",
+    "proposes",
+    "evaluated",
+    "evaluate",
+    "evaluation",
+    "test",
+    "tested",
+    "testing",
+    "model",
+    "approach",
+    "method",
+    "system",
+    "technique",
+    "algorithm",
+    "exist",
+    "does",
+    "did",
+    "was",
+    "were",
 }
 
 QUESTION_TYPE_PRIORITY: list[str] = [
@@ -321,15 +415,15 @@ QUESTION_TYPE_PRIORITY: list[str] = [
 
 PRIMARY_SECTION_MAP: dict[str, tuple[str, ...]] = {
     "dataset": ("dataset", "data", "benchmark", "corpus", "materials"),
-    "methodology": ("methodology", "method", "approach", "pipeline", "study design"),
+    "methodology": ("methodology", "method", "approach", "pipeline", "study design", "materials"),
     "preprocessing": ("preprocessing", "preprocess", "tokenization", "cleaning"),
     "model": ("architecture", "model", "backbone", "network"),
     "training": ("training", "hyperparameter", "optimization"),
-    "evaluation": ("evaluation", "metric", "metrics", "experiment"),
+    "evaluation": ("evaluation", "metric", "metrics", "experiment", "results"),
     "results": ("result", "results", "findings", "performance"),
     "strengths": ("strength", "strengths", "contribution", "contributions"),
     "limitations": ("limitation", "limitations", "weakness", "weaknesses"),
-    "future_work": ("future", "future work"),
+    "future_work": ("future", "future work", "discussion"),
 }
 
 SECONDARY_SECTION_MAP: dict[str, tuple[str, ...]] = {
@@ -385,9 +479,7 @@ def classify_question(question: str) -> str:
     return max(scores, key=scores.get)
 
 
-def evidence_supports(
-    question: str, chunks: list[Chunk], question_type: str | None = None
-) -> bool:
+def evidence_supports(question: str, chunks: list[Chunk], question_type: str | None = None) -> bool:
     if not chunks:
         return False
     kind = question_type or classify_question(question)
@@ -395,41 +487,55 @@ def evidence_supports(
     if not q_words:
         return False
 
-    all_chunk_words = set().union(*[content_words(c.text) for c in chunks])
+    domain_signals = QUESTION_SIGNALS.get(kind, set())
+    specific_topic_terms = q_words - GENERIC_QUESTION_TERMS - domain_signals
 
-    # For general queries, require substantive overlap of at least 2 content words (or all if short)
-    if kind in {"general", "metadata"}:
-        matched = q_words & all_chunk_words
-        threshold = min(2, len(q_words))
-        return len(matched) >= threshold
-
-    # For targeted academic questions:
-    signals = QUESTION_SIGNALS.get(kind, set())
-    has_signal = any(signals & content_words(chunk.text) for chunk in chunks)
-    if not has_signal:
-        return False
-
-    # Check if question specifies concrete topic constraints (terms outside general domain signals)
-    generic_question_terms = signals | {
-        "used",
-        "use",
-        "study",
-        "paper",
-        "main",
-        "primary",
-        "work",
-        "author",
-        "authors",
-        "what",
-        "which",
-        "how",
-    }
-    specific_topic_terms = q_words - generic_question_terms
+    # For queries with specific topic entities, at least ONE chunk must substantiate them
     if specific_topic_terms:
-        if not (specific_topic_terms & all_chunk_words):
+        has_chunk_support = False
+        for chunk in chunks:
+            chunk_words = content_words(chunk.text)
+            overlap = specific_topic_terms & chunk_words
+            threshold = (
+                1 if len(specific_topic_terms) <= 2 else math.ceil(len(specific_topic_terms) * 0.35)
+            )
+            if len(overlap) >= threshold:
+                has_chunk_support = True
+                break
+        if not has_chunk_support:
             return False
+    # Subject anchoring rule:
+    # If the question explicitly queries a compound/hyphenated model (e.g. AdaQuant-FL, KG-CLIP):
+    # At least one single supporting chunk must contain that model (and co-occur with specific topic terms)
+    # to prevent distractor cross-contamination.
+    hyphenated_models = {t.lower() for t in re.findall(r"\b[A-Za-z0-9]+-[A-Za-z0-9]+\b", question)}
+    if hyphenated_models:
+        model_roots = set().union(*[content_words(m) for m in hyphenated_models])
+        if model_roots and not any(model_roots & content_words(chunk.text) for chunk in chunks):
+            return False
+        non_model_terms = specific_topic_terms - model_roots
+        if non_model_terms:
+            has_cooccurrence = any(
+                bool(model_roots & content_words(c.text))
+                and bool(non_model_terms & content_words(c.text))
+                for c in chunks
+            )
+            if not has_cooccurrence:
+                return False
 
-    return True
+    # For targeted academic questions: require signal or primary section match in at least one chunk
+    if kind not in {"general", "metadata"}:
+        has_signal = any(
+            (domain_signals & content_words(chunk.text))
+            or any(sec in chunk.section.lower() for sec in PRIMARY_SECTION_MAP.get(kind, ()))
+            for chunk in chunks
+        )
+        if not has_signal:
+            return False
+        return True
+
+    # For general queries: require at least 1 substantive content word in at least one chunk
+    return any(bool(q_words & content_words(c.text)) for c in chunks)
 
 
 def cosine(left: Sequence[float], right: Sequence[float]) -> float:
@@ -442,25 +548,18 @@ def chunk_text(text: str, page: int | None = None, max_words: int = 220) -> list
         r"abstract|introduction|background|related\s+work|prior\s+work|study\s+design|design|"
         r"datasets?|data\s+(?:source|collection|preprocessing)?|preprocessing|tokenization|"
         r"materials?\s+and\s+methods|method(?:ology|s)?|training|model(?:\s+architecture)?|"
-        r"experiments?|results?|evaluation|strengths?|discussion|conclusion|limitations?|future(?:\s+work)?|references"
+        r"experiments?|results?(?:\s+and\s+(?:findings|discussion))?|evaluation|strengths?|"
+        r"limitations?(?:\s+and\s+weaknesses)?|weaknesses?|"
+        r"discussion(?:\s+and\s+(?:future\s+work|conclusions?))?|conclusions?(?:\s+and\s+future\s+work)?|"
+        r"future(?:\s+work)?|references"
     )
-    sections = re.split(
-        rf"\n\s*(?=(?:{heading})\s*(?:\n|$))", normalized, flags=re.I | re.M
-    )
+    sections = re.split(rf"\n\s*(?=(?:{heading})\s*(?:\n|$))", normalized, flags=re.I | re.M)
     chunks: list[Chunk] = []
     index = 0
     for raw_section in sections:
-        paragraphs = [
-            part.strip()
-            for part in re.split(r"\n\s*\n|\n", raw_section)
-            if part.strip()
-        ]
+        paragraphs = [part.strip() for part in re.split(r"\n\s*\n|\n", raw_section) if part.strip()]
         section = (
-            (
-                paragraphs[0][:100]
-                if paragraphs and len(paragraphs[0].split()) <= 12
-                else "Body"
-            )
+            (paragraphs[0][:100] if paragraphs and len(paragraphs[0].split()) <= 12 else "Body")
             .strip()
             .title()
         )
@@ -499,18 +598,15 @@ def hybrid_retrieve(
 
     for chunk in chunks:
         terms = content_words(chunk.text)
-        lexical = len(query_terms & terms) / max(len(query_terms), 1)
+        overlap = query_terms & terms
+        lexical = len(overlap) / max(len(query_terms), 1)
         dense = cosine(query_vector, chunk.embedding)
         section = chunk.section.lower()
         section_boost = 0.0
 
-        if any(
-            label in section for label in PRIMARY_SECTION_MAP.get(question_type, ())
-        ):
+        if any(label in section for label in PRIMARY_SECTION_MAP.get(question_type, ())):
             section_boost += cfg.section_priority_boost
-        elif any(
-            label in section for label in SECONDARY_SECTION_MAP.get(question_type, ())
-        ):
+        elif any(label in section for label in SECONDARY_SECTION_MAP.get(question_type, ())):
             section_boost += cfg.section_priority_boost * 0.4
 
         # Suppress background sections for empirical questions
@@ -519,30 +615,11 @@ def hybrid_retrieve(
         ):
             section_boost -= cfg.background_penalty
 
-        text_boost = 0.0
-        if question_type == "dataset":
-            evidence_signals = {
-                "electronic",
-                "medical",
-                "records",
-                "randomly",
-                "selected",
-                "patients",
-                "participants",
-                "sample",
-                "database",
-                "dataset",
-                "data",
-                "corpus",
-                "benchmark",
-            }
-            text_boost = cfg.dataset_signal_boost * len(evidence_signals & terms)
+        # Boost chunk with high query word density
+        match_boost = 0.12 * len(overlap)
 
         total_score = (
-            cfg.dense_weight * dense
-            + cfg.lexical_weight * lexical
-            + section_boost
-            + text_boost
+            cfg.dense_weight * dense + cfg.lexical_weight * lexical + section_boost + match_boost
         )
         scored.append((total_score, chunk))
 

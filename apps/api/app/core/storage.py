@@ -27,9 +27,7 @@ def sanitize_filename(filename: str) -> str:
     return clean[:200] or "document.pdf"
 
 
-def generate_object_key(
-    owner_id: UUID | str | None, paper_id: UUID | str, filename: str
-) -> str:
+def generate_object_key(owner_id: UUID | str | None, paper_id: UUID | str, filename: str) -> str:
     """Generate deterministic, partitioned object key."""
     owner_part = str(owner_id) if owner_id else "public"
     safe_name = sanitize_filename(filename)
@@ -81,9 +79,7 @@ class LocalStorageBackend:
         safe_rel = Path(object_key).as_posix().lstrip("/")
         return self.base_dir / safe_rel
 
-    async def put(
-        self, object_key: str, data: bytes, content_type: str = "application/pdf"
-    ) -> str:
+    async def put(self, object_key: str, data: bytes, content_type: str = "application/pdf") -> str:
         target_path = self._resolve_path(object_key)
         target_path.parent.mkdir(parents=True, exist_ok=True)
         target_path.write_bytes(data)
@@ -124,6 +120,13 @@ class S3StorageBackend:
         self.region = region
         self._bucket_verified = False
 
+    @property
+    def host_header(self) -> str:
+        netloc = httpx.URL(self.endpoint_url).netloc
+        if isinstance(netloc, bytes):
+            return netloc.decode("ascii")
+        return str(netloc)
+
     def _sign_request(
         self,
         method: str,
@@ -136,15 +139,22 @@ class S3StorageBackend:
         date_stamp = now.strftime("%Y%m%d")
 
         payload_hash = hashlib.sha256(payload).hexdigest()
-        headers["x-amz-date"] = amz_date
-        headers["x-amz-content-sha256"] = payload_hash
+        clean_headers: dict[str, str] = {}
+        for k, v in headers.items():
+            str_val = v.decode("ascii") if isinstance(v, bytes) else str(v)
+            clean_headers[k] = str_val
+
+        clean_headers["x-amz-date"] = amz_date
+        clean_headers["x-amz-content-sha256"] = payload_hash
 
         canonical_headers = "".join(
-            f"{k.lower()}:{headers[k].strip()}\n" for k in sorted(headers)
+            f"{k.lower()}:{clean_headers[k].strip()}\n" for k in sorted(clean_headers)
         )
-        signed_headers = ";".join(sorted(k.lower() for k in headers))
+        signed_headers = ";".join(sorted(k.lower() for k in clean_headers))
 
-        canonical_request = f"{method.upper()}\n{url_path}\n\n{canonical_headers}\n{signed_headers}\n{payload_hash}"
+        canonical_request = (
+            f"{method.upper()}\n{url_path}\n\n{canonical_headers}\n{signed_headers}\n{payload_hash}"
+        )
 
         algorithm = "AWS4-HMAC-SHA256"
         credential_scope = f"{date_stamp}/{self.region}/s3/aws4_request"
@@ -158,56 +168,49 @@ class S3StorageBackend:
         k_service = _sign(k_region, "s3")
         k_signing = _sign(k_service, "aws4_request")
 
-        signature = hmac.new(
-            k_signing, string_to_sign.encode("utf-8"), hashlib.sha256
-        ).hexdigest()
+        signature = hmac.new(k_signing, string_to_sign.encode("utf-8"), hashlib.sha256).hexdigest()
 
         authorization = (
             f"{algorithm} Credential={self.access_key}/{credential_scope}, "
             f"SignedHeaders={signed_headers}, Signature={signature}"
         )
-        headers["Authorization"] = authorization
-        return headers
+        clean_headers["Authorization"] = authorization
+        return clean_headers
 
     async def _ensure_bucket(self) -> None:
         if self._bucket_verified:
             return
         url_path = f"/{self.bucket}"
-        headers = {"Host": httpx.URL(self.endpoint_url).netloc}
+        headers = {"Host": self.host_header}
         signed = self._sign_request("HEAD", url_path, dict(headers), b"")
         async with httpx.AsyncClient(timeout=10) as client:
             resp = await client.head(f"{self.endpoint_url}{url_path}", headers=signed)
-            if resp.status_code == 404:
+            if resp.status_code in (403, 404):
                 # Create bucket
                 put_headers = dict(headers)
                 signed_put = self._sign_request("PUT", url_path, put_headers, b"")
-                put_resp = await client.put(
-                    f"{self.endpoint_url}{url_path}", headers=signed_put
-                )
-                put_resp.raise_for_status()
+                put_resp = await client.put(f"{self.endpoint_url}{url_path}", headers=signed_put)
+                if put_resp.status_code not in (200, 409):
+                    put_resp.raise_for_status()
         self._bucket_verified = True
 
-    async def put(
-        self, object_key: str, data: bytes, content_type: str = "application/pdf"
-    ) -> str:
+    async def put(self, object_key: str, data: bytes, content_type: str = "application/pdf") -> str:
         await self._ensure_bucket()
         url_path = f"/{self.bucket}/{object_key.lstrip('/')}"
         headers = {
-            "Host": httpx.URL(self.endpoint_url).netloc,
+            "Host": self.host_header,
             "Content-Type": content_type,
             "Content-Length": str(len(data)),
         }
         signed = self._sign_request("PUT", url_path, headers, data)
         async with httpx.AsyncClient(timeout=30) as client:
-            resp = await client.put(
-                f"{self.endpoint_url}{url_path}", headers=signed, content=data
-            )
+            resp = await client.put(f"{self.endpoint_url}{url_path}", headers=signed, content=data)
             resp.raise_for_status()
         return object_key
 
     async def get(self, object_key: str) -> bytes:
         url_path = f"/{self.bucket}/{object_key.lstrip('/')}"
-        headers = {"Host": httpx.URL(self.endpoint_url).netloc}
+        headers = {"Host": self.host_header}
         signed = self._sign_request("GET", url_path, headers, b"")
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.get(f"{self.endpoint_url}{url_path}", headers=signed)
@@ -218,7 +221,7 @@ class S3StorageBackend:
 
     async def delete(self, object_key: str) -> bool:
         url_path = f"/{self.bucket}/{object_key.lstrip('/')}"
-        headers = {"Host": httpx.URL(self.endpoint_url).netloc}
+        headers = {"Host": self.host_header}
         signed = self._sign_request("DELETE", url_path, headers, b"")
         async with httpx.AsyncClient(timeout=10) as client:
             resp = await client.delete(f"{self.endpoint_url}{url_path}", headers=signed)
@@ -226,7 +229,7 @@ class S3StorageBackend:
 
     async def exists(self, object_key: str) -> bool:
         url_path = f"/{self.bucket}/{object_key.lstrip('/')}"
-        headers = {"Host": httpx.URL(self.endpoint_url).netloc}
+        headers = {"Host": self.host_header}
         signed = self._sign_request("HEAD", url_path, headers, b"")
         async with httpx.AsyncClient(timeout=10) as client:
             resp = await client.head(f"{self.endpoint_url}{url_path}", headers=signed)
@@ -241,10 +244,7 @@ class StorageService:
         self.local_backend = LocalStorageBackend(settings.storage_local_dir)
         self.s3_backend: S3StorageBackend | None = None
 
-        if (
-            settings.storage_backend in ("s3", "auto")
-            and settings.object_storage_endpoint
-        ):
+        if settings.storage_backend in ("s3", "auto") and settings.object_storage_endpoint:
             try:
                 self.s3_backend = S3StorageBackend(
                     endpoint_url=settings.object_storage_endpoint,
@@ -258,9 +258,7 @@ class StorageService:
                     f"Could not initialize S3 storage backend: {exc}. Using local storage."
                 )
 
-    async def put(
-        self, object_key: str, data: bytes, content_type: str = "application/pdf"
-    ) -> str:
+    async def put(self, object_key: str, data: bytes, content_type: str = "application/pdf") -> str:
         if self.s3_backend and get_settings().storage_backend != "local":
             try:
                 return await self.s3_backend.put(object_key, data, content_type)
@@ -275,9 +273,7 @@ class StorageService:
             try:
                 return await self.s3_backend.get(object_key)
             except Exception as exc:
-                logger.warning(
-                    f"S3 get failed for {object_key}: {exc}. Trying local storage."
-                )
+                logger.warning(f"S3 get failed for {object_key}: {exc}. Trying local storage.")
         return await self.local_backend.get(object_key)
 
     async def delete(self, object_key: str) -> bool:

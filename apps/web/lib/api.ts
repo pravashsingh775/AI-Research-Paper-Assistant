@@ -35,3 +35,5 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
 
 export type WorkspacePaper = { id: string; title: string; summary?: string; authors_raw?: string; year?: number; venue?: string; citation_count?: number; source?: string; evidence_state?: string; analysis?: Record<string, unknown> };
 export async function loadPapers() { return api<WorkspacePaper[]>("/api/papers"); }
+export async function deletePaper(id: string) { return api<void>(`/api/papers/${id}`, { method: "DELETE" }); }
+

@@ -1,0 +1,138 @@
+[
+  {
+    "endpoint": "GET /liveness",
+    "total_requests": 100,
+    "concurrency": 10,
+    "completed": 100,
+    "errors": 0,
+    "success_rate": "100.0%",
+    "duration_seconds": 1.121,
+    "throughput_rps": 89.2,
+    "latency_min_ms": 35.37,
+    "latency_p50_ms": 87.68,
+    "latency_p90_ms": 192.69,
+    "latency_p95_ms": 231.88,
+    "latency_p99_ms": 311.98,
+    "latency_max_ms": 357.39,
+    "status_distribution": {
+      "200": 100
+    }
+  },
+  {
+    "endpoint": "GET /readiness",
+    "total_requests": 100,
+    "concurrency": 10,
+    "completed": 100,
+    "errors": 0,
+    "success_rate": "100.0%",
+    "duration_seconds": 6.604,
+    "throughput_rps": 15.1,
+    "latency_min_ms": 303.1,
+    "latency_p50_ms": 630.52,
+    "latency_p90_ms": 782.04,
+    "latency_p95_ms": 920.23,
+    "latency_p99_ms": 1073.05,
+    "latency_max_ms": 1079.06,
+    "status_distribution": {
+      "200": 57,
+      "503": 43
+    }
+  },
+  {
+    "endpoint": "GET /api/auth/me",
+    "total_requests": 100,
+    "concurrency": 10,
+    "completed": 100,
+    "errors": 0,
+    "success_rate": "100.0%",
+    "duration_seconds": 1.115,
+    "throughput_rps": 89.7,
+    "latency_min_ms": 40.87,
+    "latency_p50_ms": 87.32,
+    "latency_p90_ms": 190.05,
+    "latency_p95_ms": 220.6,
+    "latency_p99_ms": 278.64,
+    "latency_max_ms": 301.73,
+    "status_distribution": {
+      "200": 100
+    }
+  },
+  {
+    "endpoint": "POST /api/search",
+    "total_requests": 50,
+    "concurrency": 10,
+    "completed": 49,
+    "errors": 1,
+    "success_rate": "98.0%",
+    "duration_seconds": 13.86,
+    "throughput_rps": 3.5,
+    "latency_min_ms": 1373.94,
+    "latency_p50_ms": 2687.0,
+    "latency_p90_ms": 3474.85,
+    "latency_p95_ms": 3932.4,
+    "latency_p99_ms": 3988.0,
+    "latency_max_ms": 4049.41,
+    "status_distribution": {
+      "200": 3,
+      "500": 46
+    }
+  },
+  {
+    "endpoint": "GET /liveness",
+    "total_requests": 200,
+    "concurrency": 25,
+    "completed": 200,
+    "errors": 0,
+    "success_rate": "100.0%",
+    "duration_seconds": 4.925,
+    "throughput_rps": 40.6,
+    "latency_min_ms": 89.19,
+    "latency_p50_ms": 363.82,
+    "latency_p90_ms": 1116.48,
+    "latency_p95_ms": 1534.49,
+    "latency_p99_ms": 3025.06,
+    "latency_max_ms": 4091.71,
+    "status_distribution": {
+      "200": 200
+    }
+  },
+  {
+    "endpoint": "GET /liveness",
+    "total_requests": 250,
+    "concurrency": 50,
+    "completed": 250,
+    "errors": 0,
+    "success_rate": "100.0%",
+    "duration_seconds": 5.711,
+    "throughput_rps": 43.8,
+    "latency_min_ms": 80.55,
+    "latency_p50_ms": 737.7,
+    "latency_p90_ms": 2401.89,
+    "latency_p95_ms": 2870.73,
+    "latency_p99_ms": 4249.33,
+    "latency_max_ms": 4457.06,
+    "status_distribution": {
+      "200": 250
+    }
+  },
+  {
+    "endpoint": "GET /readiness",
+    "total_requests": 100,
+    "concurrency": 25,
+    "completed": 100,
+    "errors": 0,
+    "success_rate": "100.0%",
+    "duration_seconds": 7.535,
+    "throughput_rps": 13.3,
+    "latency_min_ms": 638.93,
+    "latency_p50_ms": 1607.29,
+    "latency_p90_ms": 2737.2,
+    "latency_p95_ms": 2907.01,
+    "latency_p99_ms": 2968.78,
+    "latency_max_ms": 3020.99,
+    "status_distribution": {
+      "200": 54,
+      "503": 46
+    }
+  }
+]
