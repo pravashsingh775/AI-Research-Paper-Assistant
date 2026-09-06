@@ -81,33 +81,33 @@ Most "Chat with your PDF" projects are fragile prototypes that choke on complex 
 ```mermaid
 flowchart LR
     subgraph Client ["Frontend Layer (Next.js 15 / React 19)"]
-        Browser[Researcher Browser] --> Web[Next.js Web App\n:3000]
+        Browser["Researcher Browser"] --> Web["Next.js Web App (Port 3000)"]
     end
 
     subgraph API ["Application Layer (FastAPI)"]
-        Web -->|HTTP JSON + JWT| FastAPI[FastAPI Server\n:8000]
-        FastAPI --> Trace[CorrelationIdMiddleware\nX-Correlation-ID]
-        FastAPI --> Auth[Argon2 / JWT Guard]
-        FastAPI --> Probes[/liveness & /readiness]
+        Web -->|HTTP JSON + JWT| FastAPI["FastAPI Server (Port 8000)"]
+        FastAPI --> Trace["CorrelationIdMiddleware (X-Correlation-ID)"]
+        FastAPI --> Auth["Argon2id & JWT Auth Guard"]
+        FastAPI --> Probes["Health & Readiness Probes"]
     end
 
     subgraph Storage ["Persistence & Queue Layer"]
-        FastAPI --> DB[(PostgreSQL 16\npgvector 384-dim)]
-        FastAPI --> Redis[(Redis 7.0\nresearch-paper-jobs)]
-        FastAPI --> MinIO[(MinIO S3 Storage\nacademic-papers)]
+        FastAPI --> DB[("PostgreSQL 16 (pgvector 384-dim)")]
+        FastAPI --> Redis[("Redis 7.0 (Job Queue)")]
+        FastAPI --> MinIO[("MinIO S3 Storage (PDF Binaries)")]
     end
 
     subgraph Async ["Background Execution Layer"]
-        Redis --> Worker[Asynchronous Worker]
-        Worker --> Normalizer[Text Normalization\nNUL Strip & Unicode Preserved]
-        Worker --> Embedder[384-dim Embedder]
+        Redis --> Worker["Asynchronous Worker"]
+        Worker --> Normalizer["Text Normalization Engine"]
+        Worker --> Embedder["384-dim Vector Embedder"]
         Worker --> DB
         Worker --> MinIO
     end
 
     subgraph External ["Scholarly Providers & LLMs"]
-        FastAPI -. Federated Discovery .-> Scholarly[OpenAlex / arXiv / Crossref]
-        FastAPI -. Bounded Inference .-> LLM[Anthropic Messages API]
+        FastAPI -. Federated Discovery .-> Scholarly["Scholarly APIs (OpenAlex / arXiv / Crossref)"]
+        FastAPI -. Bounded Inference .-> LLM["Anthropic Messages API"]
     end
 ```
 

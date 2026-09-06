@@ -12,16 +12,16 @@ The core production rule is strict: the UI displays persisted or API-returned da
 
 ```mermaid
 flowchart LR
-    Browser[Researcher browser] --> Web[Next.js web app\nlocalhost:3000]
-    Web -->|HTTP JSON / Bearer token| API[FastAPI API\nlocalhost:8000]
-    API --> DB[(PostgreSQL 16\n+ pgvector)]
-    API --> Redis[(Redis 7\nresearch-paper-jobs)]
-    API --> Minio[(MinIO S3 Storage\nacademic-papers)]
-    Redis --> Worker[Async worker]
+    Browser["Researcher Browser"] --> Web["Next.js Web App (Port 3000)"]
+    Web -->|HTTP JSON / Bearer token| API["FastAPI API (Port 8000)"]
+    API --> DB[("PostgreSQL 16 + pgvector")]
+    API --> Redis[("Redis 7.0 (Job Queue)")]
+    API --> Minio[("MinIO S3 Storage (academic-papers)")]
+    Redis --> Worker["Async Worker"]
     Worker --> DB
     Worker --> Minio
-    API -. optional .-> Anthropic[Anthropic Messages API]
-    API -. discovery .-> Scholarly[Scholarly providers\nOpenAlex / arXiv / Crossref]
+    API -. optional .-> Anthropic["Anthropic Messages API"]
+    API -. discovery .-> Scholarly["Scholarly Providers (OpenAlex / arXiv / Crossref)"]
 ```
 
 ### Services
@@ -64,14 +64,14 @@ Passwords are hashed with `pwdlib`/Argon2. Protected resources strictly verify b
 
 ```mermaid
 flowchart TD
-    Q[Topic / research query] --> S[POST /api/search]
-    S --> Local[Read normalized local JSONL corpus]
-    S --> Provider[Scholarly provider federated search\nOpenAlex / arXiv / Crossref]
-    Local --> Rank[Term-based ranking and top-10 selection]
+    Q["Topic / Research Query"] --> S["POST /api/search"]
+    S --> Local["Read Normalized Local JSONL Corpus"]
+    S --> Provider["Scholarly Federated Search (OpenAlex / arXiv / Crossref)"]
+    Local --> Rank["Term-Based Ranking & Selection"]
     Provider --> Rank
-    Rank --> Dedupe[Deduplicate by title / external ID]
-    Dedupe --> Metadata[Paper metadata + evidence state]
-    Metadata --> UI[Ranked result cards on Discovery desk]
+    Rank --> Dedupe["Deduplicate by Title & External ID"]
+    Dedupe --> Metadata["Paper Metadata & Evidence State"]
+    Metadata --> UI["Ranked Result Cards on Discovery Desk"]
 ```
 
 Search results are discovery records with evidence states (`metadata-only` vs. `full-text`). A selected persisted paper can be loaded from `GET /api/papers/{paper_id}` for stored abstract, authors, metadata, chunks, and structured analysis.
@@ -119,15 +119,15 @@ sequenceDiagram
 
 ```mermaid
 flowchart LR
-    Question[Question + paper_id + optional session_id] --> Auth[JWT + paper ownership check]
-    Auth --> Vector[Embed question: 384-dim hash/vector]
-    Vector --> PG[pgvector cosine similarity\ncandidate chunks retrieved]
-    PG --> Rerank[CrossEncoder rerank\nor explicit fallback]
-    Rerank --> Context[Top chunks with page & section attribution]
-    Context --> Grounding[Evidence validation check\nconfidence & overlap thresholds]
-    Grounding --> Model[Answer generation + exact inline citations]
-    Model --> Store[Store user & assistant messages in ChatSession]
-    Store --> Response[Answer + citations + retrieval metadata]
+    Question["Question + paper_id + session_id"] --> Auth["JWT & Paper Ownership Check"]
+    Auth --> Vector["Embed Question (384-dim Vector)"]
+    Vector --> PG["pgvector Cosine Similarity Search"]
+    PG --> Rerank["CrossEncoder Rerank / Scoring"]
+    Rerank --> Context["Top Chunks with Page & Section Attribution"]
+    Context --> Grounding["Evidence Validation Check"]
+    Grounding --> Model["Answer Generation with Exact Inline Citations"]
+    Model --> Store["Store Messages in ChatSession"]
+    Store --> Response["Answer + Citations + Retrieval Metadata"]
 ```
 
 #### Evidence Grounding Protocol:
