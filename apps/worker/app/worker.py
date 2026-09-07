@@ -270,17 +270,18 @@ async def _process_uploaded_pdf(
     # Run paper analysis
     analysis = await analyze_paper_text(paper.title, full_text, "extracted PDF text")
 
+    model_name = str(analysis.get("model") or "heuristic-synthesis")[:80]
     existing_analysis = await session.get(PaperAnalysis, paper_id)
     if existing_analysis:
         existing_analysis.payload = analysis
-        existing_analysis.model = str(analysis.get("method", "local"))
+        existing_analysis.model = model_name
         existing_analysis.confidence = analysis.get("confidence")
     else:
         session.add(
             PaperAnalysis(
                 paper_id=paper_id,
                 payload=analysis,
-                model=str(analysis.get("method", "local")),
+                model=model_name,
                 confidence=analysis.get("confidence"),
             )
         )
@@ -403,7 +404,7 @@ async def _ingest_corpus_full_text(
         PaperAnalysis(
             paper_id=paper.id,
             payload=analysis,
-            model=str(analysis.get("method", "local")),
+            model=str(analysis.get("model") or "heuristic-synthesis")[:80],
             confidence=analysis.get("confidence"),
         )
     )

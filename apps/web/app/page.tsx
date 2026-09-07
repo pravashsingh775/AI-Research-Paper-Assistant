@@ -104,6 +104,16 @@ export default function Home() {
     setChatHistory([]);
     setError("");
     setChatSessionId(null);
+
+    // Hydrate full paper details from server to ensure latest analysis & status
+    if (paper.id) {
+      api<Paper>(`/api/papers/${paper.id}`)
+        .then(fullPaper => {
+          setSelected(prev => (prev?.id === paper.id ? { ...prev, ...fullPaper } : prev));
+          if (fullPaper.processing_status) setJobStatus(fullPaper.processing_status);
+        })
+        .catch(() => {});
+    }
   }
 
   useEffect(() => {
@@ -542,7 +552,7 @@ function PaperWorkspace({
           </div>
           <div className="detail-block">
             <h4>Methodology</h4>
-            <p>{analysis.advantages || analysis.method || "Extracted from full paper text."}</p>
+            <p>{analysis.method || analysis.advantages || "Extracted from paper text."}</p>
           </div>
           {analysis.strengths?.length > 0 && (
             <div className="detail-block">
