@@ -12,6 +12,10 @@ services:
       OBJECT_STORAGE_BUCKET: research-papers
       OBJECT_STORAGE_ACCESS_KEY: minio
       OBJECT_STORAGE_SECRET_KEY: miniosecret
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-1.5-flash}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-4-5-20250929}
     ports:
       - "8000:8000"
     depends_on:
@@ -37,6 +41,10 @@ services:
       OBJECT_STORAGE_BUCKET: research-papers
       OBJECT_STORAGE_ACCESS_KEY: minio
       OBJECT_STORAGE_SECRET_KEY: miniosecret
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-1.5-flash}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-4-5-20250929}
     depends_on:
       postgres:
         condition: service_healthy

@@ -45,6 +45,30 @@ def extract_uploaded_title(text: str, filename: str) -> str:
     return fallback
 
 
+def extract_uploaded_authors(text: str) -> str:
+    """Extract authors from uploaded paper text if explicitly labeled near the top."""
+    for line in text.splitlines()[:35]:
+        clean = " ".join(line.split()).strip()
+        match = re.match(r"^(?:authors?|by)\s*[:\-–]\s*(.+)$", clean, re.IGNORECASE)
+        if match:
+            candidate = match.group(1).strip()
+            if 3 <= len(candidate) <= 300:
+                return candidate
+    return ""
+
+
+def extract_uploaded_venue(text: str) -> str:
+    """Extract publication venue or conference from uploaded paper text if explicitly labeled."""
+    for line in text.splitlines()[:35]:
+        clean = " ".join(line.split()).strip()
+        match = re.match(r"^(?:venue|journal|conference|published in)\s*[:\-–]\s*(.+)$", clean, re.IGNORECASE)
+        if match:
+            candidate = match.group(1).strip()
+            if 3 <= len(candidate) <= 200:
+                return candidate
+    return ""
+
+
 def synthesize_academic_analysis(title: str, text: str, source: str = "abstract") -> dict[str, Any]:
     """
     High-precision, domain-aware heuristic academic analyzer.

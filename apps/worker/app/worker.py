@@ -31,7 +31,9 @@ from apps.api.app.models import (
 from apps.api.app.services.analysis import (
     analyze_paper_text,
     clean_extracted_text,
+    extract_uploaded_authors,
     extract_uploaded_title,
+    extract_uploaded_venue,
 )
 from apps.api.app.services.queue import QUEUE_NAME
 from apps.api.app.services.rag import Chunk, chunk_text
@@ -212,6 +214,14 @@ async def _process_uploaded_pdf(
         extracted_title = normalize_extracted_text(extracted_title)
         if not paper.title or paper.title in ("Uploaded paper", document.filename):
             paper.title = extracted_title
+    if not paper.authors or paper.authors == "Unknown":
+        extracted_authors = extract_uploaded_authors(full_text)
+        if extracted_authors:
+            paper.authors = normalize_extracted_text(extracted_authors)
+    if not paper.venue:
+        extracted_venue = extract_uploaded_venue(full_text)
+        if extracted_venue:
+            paper.venue = normalize_extracted_text(extracted_venue)
     paper.abstract = normalize_extracted_text(full_text[:10000])
 
     job.progress = 50
