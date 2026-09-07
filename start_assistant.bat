@@ -117,7 +117,7 @@ set /a api_attempts=0
 :wait_api
 ping 127.0.0.1 -n 3 >nul
 set /a api_attempts+=1
-curl -s -f http://localhost:8000/health >nul 2>&1
+curl -s http://localhost:8000/health 2>nul | findstr "\"status\":\"ok\"" >nul 2>&1
 if %errorlevel% equ 0 goto api_is_ready
 
 if !api_attempts! geq 30 (
