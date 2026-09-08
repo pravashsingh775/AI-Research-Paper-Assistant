@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import AISettingsModal from "./AISettingsModal";
 
 const links = [
   ["Discover", "/"],
@@ -18,7 +19,21 @@ const links = [
 
 export default function AppHeader() {
   const [email, setEmail] = useState("");
+  const [isAIModalOpen, setIsAIModalOpen] = useState(false);
+  const [aiStatus, setAiStatus] = useState({ hasKey: false, provider: "gemini", model: "" });
   const pathname = usePathname();
+
+  useEffect(() => {
+    function updateStatus() {
+      const key = localStorage.getItem("research_llm_key");
+      const prov = localStorage.getItem("research_llm_provider") || "gemini";
+      const mod = localStorage.getItem("research_llm_model") || "gemini-1.5-flash";
+      setAiStatus({ hasKey: !!key, provider: prov, model: mod });
+    }
+    updateStatus();
+    window.addEventListener("llm-settings-updated", updateStatus);
+    return () => window.removeEventListener("llm-settings-updated", updateStatus);
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem("research_token");
@@ -61,6 +76,33 @@ export default function AppHeader() {
       </nav>
 
       <div className="header-actions">
+        <button
+          type="button"
+          onClick={() => setIsAIModalOpen(true)}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "6px",
+            padding: "5px 12px",
+            borderRadius: "var(--radius-pill)",
+            fontSize: "12px",
+            fontWeight: 600,
+            cursor: "pointer",
+            border: aiStatus.hasKey ? "1px solid var(--emerald-border)" : "1px solid var(--primary-border)",
+            backgroundColor: aiStatus.hasKey ? "var(--emerald-light)" : "var(--primary-light)",
+            color: aiStatus.hasKey ? "var(--emerald)" : "var(--primary)",
+            transition: "all 0.15s ease",
+          }}
+          title="Configure Google Gemini / Cloud AI key"
+        >
+          <span style={{ fontSize: "13px" }}>⚡</span>
+          <span>
+            {aiStatus.hasKey
+              ? `${aiStatus.provider === "gemini" ? "Gemini" : aiStatus.provider.toUpperCase()} Active`
+              : "AI Key: Setup Gemini"}
+          </span>
+        </button>
+
         <div className="status-indicator" title="All backend, Redis and pgvector services active">
           <span className="status-pulse" />
           <span>Live Systems</span>
@@ -94,6 +136,7 @@ export default function AppHeader() {
           )}
         </div>
       </div>
+      <AISettingsModal isOpen={isAIModalOpen} onClose={() => setIsAIModalOpen(false)} />
     </header>
   );
 }

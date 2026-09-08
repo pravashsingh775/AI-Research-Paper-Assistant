@@ -8,6 +8,14 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   const token = typeof window === "undefined" ? "" : localStorage.getItem("research_token") || "";
   const headers = new Headers(options.headers);
   if (token) headers.set("Authorization", `Bearer ${token}`);
+  if (typeof window !== "undefined") {
+    const llmKey = localStorage.getItem("research_llm_key");
+    const llmModel = localStorage.getItem("research_llm_model");
+    const llmProvider = localStorage.getItem("research_llm_provider");
+    if (llmKey && !headers.has("X-LLM-API-Key")) headers.set("X-LLM-API-Key", llmKey);
+    if (llmModel && !headers.has("X-LLM-Model")) headers.set("X-LLM-Model", llmModel);
+    if (llmProvider && !headers.has("X-LLM-Provider")) headers.set("X-LLM-Provider", llmProvider);
+  }
   // The browser must set FormData's multipart boundary itself.
   if (options.body && !(options.body instanceof FormData) && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
   let response: Response;
