@@ -42,7 +42,7 @@ type Job = {
   status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
   progress: number;
   error?: string | null;
-  result?: { analysis?: Analysis };
+  result?: { analysis?: Analysis; paper_id?: string };
 };
 
 type Evidence = {
@@ -92,6 +92,7 @@ export default function Home() {
   const [jobStatus, setJobStatus] = useState<Job["status"] | null>(null);
   const [jobProgress, setJobProgress] = useState(0);
   const [chatSessionId, setChatSessionId] = useState<string | null>(null);
+  const [fullTextOnly, setFullTextOnly] = useState(false);
 
   const isPrivateUpload = selected?.source === "upload";
   const canAsk = Boolean(
@@ -129,42 +130,34 @@ export default function Home() {
 
   useEffect(() => {
     if (!jobId) return;
-    const poll = window.setInterval(() => {
-      api<Job>(`/api/jobs/${jobId}`)
-        .then(job => {
-          setJobStatus(job.status);
-          setJobProgress(job.progress);
-          if (job.status === "COMPLETED") {
-            setSelected(current =>
-              current
-                ? {
-                    ...current,
-                    evidence_state: "full-text",
-                    analysis: job.result?.analysis ?? current.analysis,
-                  }
-                : current
-            );
-            setMessage("Paper extraction and vector indexing complete. Full-text Q&A is now active.");
-            setJobId(null);
-          } else if (job.status === "FAILED") {
-            setError(job.error || "Paper processing failed.");
-            setJobId(null);
-          } else {
-            setMessage(`Extracting pages & generating embeddings (${job.progress}%)...`);
+    const poll = window.setInterval(async () => {
+      try {
+        const job = await api<Job>(`/api/jobs/${jobId}`);
+        setJobStatus(job.status);
+        setJobProgress(job.progress);
+        if (job.status === "COMPLETED") {
+          window.clearInterval(poll);
+          setMessage("Document processing complete! Vector embeddings indexed and verified.");
+          if (job.result?.paper_id) {
+            const fresh = await api<Paper>(`/api/papers/${job.result.paper_id}`);
+            setSelected(fresh);
           }
-        })
-        .catch(reason => {
-          setError(reason instanceof Error ? reason.message : "Unable to read processing status.");
-          setJobId(null);
-        });
+        } else if (job.status === "FAILED") {
+          window.clearInterval(poll);
+          setError("Document processing failed: " + (job.error || "Unknown extraction error"));
+        }
+      } catch {
+        // Transient network error while polling
+      }
     }, 1200);
     return () => window.clearInterval(poll);
   }, [jobId]);
 
-  async function search(event?: FormEvent, queryText?: string) {
+  async function search(event?: FormEvent, queryText?: string, forceFullText?: boolean) {
     if (event) event.preventDefault();
     const query = queryText || topic;
     if (query.trim().length < 2) return;
+    const isFt = forceFullText !== undefined ? forceFullText : fullTextOnly;
     setBusy(true);
     setError("");
     setMessage("");
@@ -175,7 +168,7 @@ export default function Home() {
     try {
       const data = await api<{ papers: Paper[]; notice?: string }>("/api/search", {
         method: "POST",
-        body: JSON.stringify({ topic: query.trim() }),
+        body: JSON.stringify({ topic: query.trim(), full_text_only: isFt }),
       });
       setPapers(data.papers || []);
       setMessage(data.notice || "");
@@ -351,10 +344,43 @@ export default function Home() {
           {message && <div className="notice" role="status">{message}</div>}
           {error && <p className="error" role="alert">{error}</p>}
 
+          {/* Filter Pills */}
+          {papers.length > 0 && (
+            <div style={{ display: "flex", gap: "8px", margin: "10px 0 16px", alignItems: "center" }}>
+              <button
+                type="button"
+                className={`small-button ${!fullTextOnly ? "primary" : "secondary"}`}
+                onClick={() => {
+                  setFullTextOnly(false);
+                  search(undefined, topic, false);
+                }}
+              >
+                📚 All Results ({papers.length})
+              </button>
+              <button
+                type="button"
+                className={`small-button ${fullTextOnly ? "primary" : "secondary"}`}
+                onClick={() => {
+                  setFullTextOnly(true);
+                  search(undefined, topic, true);
+                }}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  fontWeight: 600,
+                }}
+              >
+                <span>⚡</span>
+                <span>Full-Text Ready Only ({papers.filter(p => p.evidence_state === "full-text").length})</span>
+              </button>
+            </div>
+          )}
+
           {/* Results List */}
           {papers.length > 0 && (
             <div className="results">
-              {papers.map((paper, index) => (
+              {(fullTextOnly ? papers.filter(p => p.evidence_state === "full-text") : papers).map((paper, index) => (
                 <article
                   key={paper.id}
                   className={`paper ${selected?.id === paper.id ? "active" : ""}`}

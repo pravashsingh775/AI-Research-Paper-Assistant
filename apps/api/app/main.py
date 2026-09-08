@@ -133,6 +133,7 @@ def _uploaded_title(text: str, filename: str) -> str:
 
 class SearchRequest(BaseModel):
     topic: str = Field(min_length=2, max_length=200)
+    full_text_only: bool = False
 
 
 class QuestionRequest(BaseModel):
@@ -284,6 +285,41 @@ def _corpus_papers(topic: str) -> list[dict[str, Any]]:
         }
         for score, paper in matches[:10]
     ]
+
+
+async def _get_database_full_text_papers(topic: str, session: AsyncSession) -> list[dict[str, Any]]:
+    query_words = _words(topic)
+    result = await session.execute(
+        select(Paper).where(
+            Paper.evidence_state == "full-text",
+            Paper.owner_id.is_(None),
+        )
+    )
+    db_papers = result.scalars().all()
+    matched: list[dict[str, Any]] = []
+    for p in db_papers:
+        haystack = f"{p.title} {p.abstract or ''}".lower()
+        matched_words = [w for w in query_words if w in haystack]
+        if matched_words or not query_words:
+            word_score = sum(5 if w in p.title.lower() else 2 for w in matched_words)
+            matched.append(
+                {
+                    "id": str(p.id),
+                    "title": p.title,
+                    "summary": p.abstract or "",
+                    "authors_raw": p.authors or "",
+                    "venue": p.venue,
+                    "year": p.year,
+                    "source": p.source or "corpus",
+                    "citation_count": p.citation_count or 0,
+                    "doi": p.doi,
+                    "url": p.url,
+                    "pdf_url": p.pdf_url,
+                    "evidence_state": p.evidence_state,
+                    "score": word_score + 100,
+                }
+            )
+    return matched
 
 
 async def _model_answer(
@@ -992,46 +1028,79 @@ async def remove_collection_paper(
 
 @app.post("/api/search")
 async def search(request: SearchRequest) -> dict[str, Any]:
+    async with SessionFactory() as session:
+        db_full_text_papers = await _get_database_full_text_papers(request.topic, session)
     local_papers = _corpus_papers(request.topic)
     scholarly_papers = await search_scholarly(request.topic)
     query_words = _words(request.topic)
     merged: dict[str, dict[str, Any]] = {}
-    for paper in [*local_papers, *scholarly_papers]:
+    for paper in [*db_full_text_papers, *local_papers, *scholarly_papers]:
         key = str(paper.get("doi") or paper.get("title", "")).lower().strip()
         if not key:
             continue
         haystack = f"{paper.get('title', '')} {paper.get('summary', '')}".lower()
-        paper["score"] = sum(
+        base_score = sum(
             3 if word in str(paper.get("title", "")).lower() else 1
             for word in query_words
             if word in haystack
         )
+        if paper.get("evidence_state") == "full-text":
+            base_score += 100
+        paper["score"] = max(paper.get("score", 0), base_score)
         paper["analysis"] = paper.get("analysis") or _analysis(
             str(paper.get("title", "")), str(paper.get("summary", "")), "abstract"
         )
         current = merged.get(key)
-        if not current or paper.get("citation_count", 0) > current.get("citation_count", 0):
+        if not current:
             merged[key] = paper
-    papers = sorted(
+        else:
+            if (
+                paper.get("evidence_state") == "full-text"
+                and current.get("evidence_state") != "full-text"
+            ):
+                merged[key] = paper
+            elif current.get("evidence_state") != "full-text" and paper.get(
+                "citation_count", 0
+            ) > current.get("citation_count", 0):
+                merged[key] = paper
+
+    sorted_papers = sorted(
         merged.values(),
-        key=lambda item: (item.get("score", 0), item.get("citation_count", 0)),
+        key=lambda item: (
+            1 if item.get("evidence_state") == "full-text" else 0,
+            item.get("score", 0),
+            item.get("citation_count", 0),
+        ),
         reverse=True,
-    )[:10]
+    )
+
+    if request.full_text_only:
+        papers = [p for p in sorted_papers if p.get("evidence_state") == "full-text"][:10]
+    else:
+        papers = sorted_papers[:10]
+
     corpus_jobs: list[tuple[UUID, UUID]] = []
     async with SessionFactory() as session:
         for paper in papers:
+            stored = None
+            if paper.get("id"):
+                try:
+                    stored = await session.get(Paper, UUID(paper["id"]))
+                except (ValueError, TypeError):
+                    stored = None
             external_id = str(paper.get("doi") or paper.get("id") or paper.get("title"))
-            stored = (
-                (
-                    await session.execute(
-                        select(Paper)
-                        .where(Paper.external_id == external_id)
-                        .order_by(Paper.created_at.desc())
+            if not stored:
+                stored = (
+                    (
+                        await session.execute(
+                            select(Paper)
+                            .where(Paper.external_id == external_id)
+                            .order_by(Paper.created_at.desc())
+                        )
                     )
+                    .scalars()
+                    .first()
                 )
-                .scalars()
-                .first()
-            )
             if not stored:
                 state = "processing" if paper.get("pdf_url") else "metadata-only"
                 stored = Paper(
