@@ -102,7 +102,7 @@ app.add_middleware(
     allow_headers=["*"],
     allow_credentials=True,
 )
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token", auto_error=False)
 
 DATASET_PATH = Path(__file__).resolve().parents[3] / "data" / "processed" / "arxiv_papers.jsonl"
 MAX_UPLOAD_BYTES = 15 * 1024 * 1024
@@ -188,7 +188,9 @@ def _paper_terms(paper: PaperInput) -> set[str]:
     return _words(f"{paper.title} {paper.summary}")
 
 
-async def _verify_paper_access(papers: list[PaperInput], user: User, session: AsyncSession) -> None:
+async def _verify_paper_access(
+    papers: list[PaperInput], user: User | None, session: AsyncSession
+) -> None:
     uuid_ids: list[UUID] = []
     for p in papers:
         try:
@@ -198,31 +200,42 @@ async def _verify_paper_access(papers: list[PaperInput], user: User, session: As
     if not uuid_ids:
         return
 
-    result = await session.execute(
-        select(Paper).where(
-            Paper.id.in_(uuid_ids),
-            Paper.owner_id.is_not(None),
-            Paper.owner_id != user.id,
-        )
+    query = select(Paper).where(
+        Paper.id.in_(uuid_ids),
+        Paper.owner_id.is_not(None),
     )
+    if user:
+        query = query.where(Paper.owner_id != user.id)
+    result = await session.execute(query)
     unauthorized = result.scalars().all()
     if unauthorized:
         raise HTTPException(
             status_code=403,
-            detail="Access denied: One or more selected papers belong to another user.",
+            detail="Access denied: One or more selected papers belong to another user or require authentication.",
         )
 
 
-async def current_user(
-    token: str = Depends(oauth2_scheme), session: AsyncSession = Depends(get_session)
-) -> User:
+async def optional_user(
+    token: str | None = Depends(oauth2_scheme),
+    session: AsyncSession = Depends(get_session),
+) -> User | None:
+    if not token:
+        return None
     try:
         user_id = decode_access_token(token)
-    except Exception as error:
-        raise HTTPException(status_code=401, detail="Invalid or expired access token") from error
-    user = await session.get(User, user_id)
+    except Exception:
+        return None
+    return await session.get(User, user_id)
+
+
+async def current_user(
+    user: User | None = Depends(optional_user),
+) -> User:
     if not user:
-        raise HTTPException(status_code=401, detail="User not found")
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication required. Please sign in.",
+        )
     return user
 
 
@@ -1554,28 +1567,41 @@ async def paper_qa(
 async def chat(
     request: ChatRequest,
     http_request: Request,
-    user: User = Depends(current_user),
+    user: User | None = Depends(optional_user),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     paper = await session.get(Paper, request.paper_id)
-    if not paper or (paper.owner_id is not None and paper.owner_id != user.id):
-        raise HTTPException(status_code=403, detail="You do not have access to this paper")
-    if request.session_id:
-        chat_session = (
-            await session.execute(
-                select(ChatSession).where(
-                    ChatSession.id == request.session_id,
-                    ChatSession.user_id == user.id,
-                    ChatSession.paper_id == paper.id,
+    if not paper:
+        raise HTTPException(status_code=404, detail="Paper not found")
+    if paper.owner_id is not None:
+        if not user or paper.owner_id != user.id:
+            raise HTTPException(status_code=403, detail="You do not have access to this paper")
+
+    chat_session = None
+    chat_session_id = request.session_id
+    if user:
+        if request.session_id:
+            chat_session = (
+                await session.execute(
+                    select(ChatSession).where(
+                        ChatSession.id == request.session_id,
+                        ChatSession.user_id == user.id,
+                        ChatSession.paper_id == paper.id,
+                    )
                 )
+            ).scalar_one_or_none()
+            if not chat_session:
+                raise HTTPException(status_code=404, detail="Chat session not found")
+        else:
+            chat_session = ChatSession(
+                user_id=user.id, paper_id=paper.id, title=request.question[:80]
             )
-        ).scalar_one_or_none()
-        if not chat_session:
-            raise HTTPException(status_code=404, detail="Chat session not found")
-    else:
-        chat_session = ChatSession(user_id=user.id, paper_id=paper.id, title=request.question[:80])
-        session.add(chat_session)
-        await session.flush()
+            session.add(chat_session)
+            await session.flush()
+        chat_session_id = chat_session.id
+    elif not chat_session_id:
+        chat_session_id = uuid4()
+
     # Corpus metadata is deliberately never indexed as a DocumentChunk. Only
     # an extracted, page-addressable PDF may support detailed paper answers.
     full_text = supports_full_text_qa(paper.evidence_state)
@@ -1604,6 +1630,20 @@ async def chat(
         )
         for chunk in chunks
     ]
+    # Fallback to abstract/summary if no full-text chunks exist but paper text is available
+    if not candidates and (paper.abstract or paper.summary):
+        abstract_text = paper.abstract or paper.summary
+        candidates = [
+            Chunk(
+                abstract_text,
+                page=1,
+                section="Abstract",
+                index=0,
+                embedding=[],
+            )
+        ]
+        full_text = True
+
     paper_meta = {
         "title": paper.title,
         "authors": paper.authors,
@@ -1625,25 +1665,28 @@ async def chat(
     )
     if not full_text:
         response["answer"] = "Full-text evidence is not available for this paper. " + INSUFFICIENT
-    session.add(
-        ChatMessage(
-            session_id=chat_session.id,
-            role="user",
-            content=request.question,
-            citations=[],
+
+    if user and chat_session:
+        session.add(
+            ChatMessage(
+                session_id=chat_session.id,
+                role="user",
+                content=request.question,
+                citations=[],
+            )
         )
-    )
-    session.add(
-        ChatMessage(
-            session_id=chat_session.id,
-            role="assistant",
-            content=str(response["answer"]),
-            citations=response["citations"],
+        session.add(
+            ChatMessage(
+                session_id=chat_session.id,
+                role="assistant",
+                content=str(response["answer"]),
+                citations=response["citations"],
+            )
         )
-    )
-    await session.commit()
+        await session.commit()
+
     return {
-        "session_id": str(chat_session.id),
+        "session_id": str(chat_session_id),
         "evidence_state": paper.evidence_state,
         **response,
         "retrieval": {
@@ -1657,9 +1700,11 @@ async def chat(
 @app.get("/api/chat/{session_id}")
 async def get_chat(
     session_id: UUID,
-    user: User = Depends(current_user),
+    user: User | None = Depends(optional_user),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
+    if not user:
+        return {"id": str(session_id), "paper_id": None, "messages": []}
     chat_session = (
         await session.execute(
             select(ChatSession).where(ChatSession.id == session_id, ChatSession.user_id == user.id)
@@ -1691,9 +1736,11 @@ async def get_chat(
 @app.get("/api/papers/{paper_id}/chats")
 async def list_paper_chats(
     paper_id: UUID,
-    user: User = Depends(current_user),
+    user: User | None = Depends(optional_user),
     session: AsyncSession = Depends(get_session),
 ) -> list[dict[str, Any]]:
+    if not user:
+        return []
     paper = await session.get(Paper, paper_id)
     if not paper or (paper.owner_id is not None and paper.owner_id != user.id):
         raise HTTPException(status_code=404, detail="Paper not found")
@@ -1726,7 +1773,7 @@ async def delete_chat(
 async def compare(
     request: CollectionRequest,
     http_request: Request,
-    user: User = Depends(current_user),
+    user: User | None = Depends(optional_user),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await _verify_paper_access(request.papers, user, session)
@@ -1746,7 +1793,7 @@ async def compare(
 async def trends(
     request: CollectionRequest,
     http_request: Request,
-    user: User = Depends(current_user),
+    user: User | None = Depends(optional_user),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await _verify_paper_access(request.papers, user, session)
@@ -1766,7 +1813,7 @@ async def trends(
 async def research_gaps(
     request: CollectionRequest,
     http_request: Request,
-    user: User = Depends(current_user),
+    user: User | None = Depends(optional_user),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await _verify_paper_access(request.papers, user, session)
@@ -1786,7 +1833,7 @@ async def research_gaps(
 async def research_ideas(
     request: CollectionRequest,
     http_request: Request,
-    user: User = Depends(current_user),
+    user: User | None = Depends(optional_user),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await _verify_paper_access(request.papers, user, session)
@@ -1806,7 +1853,7 @@ async def research_ideas(
 async def proposal(
     request: CollectionRequest,
     http_request: Request,
-    user: User = Depends(current_user),
+    user: User | None = Depends(optional_user),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await _verify_paper_access(request.papers, user, session)
@@ -1825,7 +1872,7 @@ async def proposal(
 @app.post("/api/settings/verify-key")
 async def verify_ai_key(
     request: VerifyKeyRequest,
-    user: User = Depends(current_user),
+    user: User | None = Depends(optional_user),
 ) -> dict[str, Any]:
     return await LLMService.verify_key(
         provider=request.provider,
@@ -1836,7 +1883,7 @@ async def verify_ai_key(
 
 @app.get("/api/settings/ai-status")
 async def get_ai_status(
-    user: User = Depends(current_user),
+    user: User | None = Depends(optional_user),
 ) -> dict[str, Any]:
     has_gemini = bool(os.getenv("GEMINI_API_KEY"))
     has_openai = bool(os.getenv("OPENAI_API_KEY"))
@@ -1858,7 +1905,7 @@ async def get_ai_status(
 @app.post("/api/similarity-map")
 async def similarity_map(
     request: CollectionRequest,
-    user: User = Depends(current_user),
+    user: User | None = Depends(optional_user),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await _verify_paper_access(request.papers, user, session)

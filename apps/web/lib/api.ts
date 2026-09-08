@@ -26,8 +26,8 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   }
   const data = await response.json().catch(() => ({}));
   if (response.status === 401) {
-    if (typeof window !== "undefined") localStorage.removeItem("research_token");
-    throw new ApiError(401, "Your session has expired. Please sign in again.");
+    if (typeof window !== "undefined" && token) localStorage.removeItem("research_token");
+    throw new ApiError(401, typeof data.detail === "string" ? data.detail : "Please sign in to access this feature.");
   }
   if (!response.ok) {
     const fallback = response.status === 403 ? "You do not have permission to perform this action."

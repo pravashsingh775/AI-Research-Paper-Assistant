@@ -4,6 +4,7 @@ import sys
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
+
 def main():
     client = httpx.Client(base_url="http://localhost:8000", timeout=30)
 
@@ -13,9 +14,13 @@ def main():
     print("[PASS] Health Check: OK")
 
     # 2. Login or register
-    login_res = client.post("/api/auth/token", data={"username": "researcher@lumen.ai", "password": "Password123!"})
+    login_res = client.post(
+        "/api/auth/token", data={"username": "researcher@lumen.ai", "password": "Password123!"}
+    )
     if login_res.status_code != 200:
-        reg = client.post("/api/auth/register", json={"email": "researcher@lumen.ai", "password": "Password123!"})
+        reg = client.post(
+            "/api/auth/register", json={"email": "researcher@lumen.ai", "password": "Password123!"}
+        )
         token = reg.json()["access_token"]
     else:
         token = login_res.json()["access_token"]
@@ -29,7 +34,11 @@ def main():
     print("[PASS] AI Status:", status_res.json())
 
     # 4. Verify Key endpoint
-    verify_res = client.post("/api/settings/verify-key", json={"api_key": "dummy-key-test", "provider": "gemini"}, headers=headers)
+    verify_res = client.post(
+        "/api/settings/verify-key",
+        json={"api_key": "dummy-key-test", "provider": "gemini"},
+        headers=headers,
+    )
     assert verify_res.status_code == 200, f"Verify key failed: {verify_res.text}"
     print("[PASS] Verify Key Check:", verify_res.json())
 
@@ -52,25 +61,31 @@ def main():
             "year": 2018,
             "venue": "NAACL",
             "citation_count": 80000,
-        }
+        },
     ]
 
     # 6. Compare
-    comp = client.post("/api/compare", json={"topic": "Transformers", "papers": papers}, headers=headers)
+    comp = client.post(
+        "/api/compare", json={"topic": "Transformers", "papers": papers}, headers=headers
+    )
     assert comp.status_code == 200, f"Compare failed: {comp.text}"
     diff_text = comp.json().get("key_differences", "")
     assert "Compare the paper-specific" not in diff_text, "Found static mock string in compare!"
     print("[PASS] Compare Matrix: OK (Genuine Synthesis)")
 
     # 7. Trends
-    trends = client.post("/api/trends", json={"topic": "Transformers", "papers": papers}, headers=headers)
+    trends = client.post(
+        "/api/trends", json={"topic": "Transformers", "papers": papers}, headers=headers
+    )
     assert trends.status_code == 200, f"Trends failed: {trends.text}"
     trend_narrative = trends.json().get("trend_analysis", "")
     assert len(trend_narrative) > 20, "Missing trend analysis narrative"
     print("[PASS] Trends Trajectory: OK")
 
     # 8. Research Gaps
-    gaps = client.post("/api/research-gaps", json={"topic": "Transformers", "papers": papers}, headers=headers)
+    gaps = client.post(
+        "/api/research-gaps", json={"topic": "Transformers", "papers": papers}, headers=headers
+    )
     assert gaps.status_code == 200, f"Gaps failed: {gaps.text}"
     findings = gaps.json().get("evidence_based_findings", [])
     assert len(findings) > 0, "No evidence based findings returned"
@@ -78,22 +93,33 @@ def main():
     print("[PASS] Research Gaps: OK")
 
     # 9. Research Ideas
-    ideas = client.post("/api/research-ideas", json={"topic": "Transformers", "papers": papers}, headers=headers)
+    ideas = client.post(
+        "/api/research-ideas", json={"topic": "Transformers", "papers": papers}, headers=headers
+    )
     assert ideas.status_code == 200, f"Ideas failed: {ideas.text}"
     idea_list = ideas.json().get("ideas", [])
     assert len(idea_list) > 0, "No ideas returned"
-    assert "Robust evaluation for" not in idea_list[0].get("title", ""), "Found static mock string in ideas!"
+    assert "Robust evaluation for" not in idea_list[0].get("title", ""), (
+        "Found static mock string in ideas!"
+    )
     print(f"[PASS] Research Ideas: OK (Generated {len(idea_list)} directions)")
 
     # 10. Proposals
-    prop = client.post("/api/proposals", json={"topic": "Transformers", "papers": papers}, headers=headers)
+    prop = client.post(
+        "/api/proposals", json={"topic": "Transformers", "papers": papers}, headers=headers
+    )
     assert prop.status_code == 200, f"Proposals failed: {prop.text}"
     prop_data = prop.json()
-    assert "A systematic study of" not in prop_data.get("title", ""), "Found static mock string in proposal title!"
-    assert len(prop_data.get("specific_hypotheses", [])) > 0, "Missing specific hypotheses in proposal"
+    assert "A systematic study of" not in prop_data.get("title", ""), (
+        "Found static mock string in proposal title!"
+    )
+    assert len(prop_data.get("specific_hypotheses", [])) > 0, (
+        "Missing specific hypotheses in proposal"
+    )
     print(f"[PASS] Research Proposal: OK ('{prop_data.get('title')}')")
 
     print("\n*** ALL 10 LIVE INTELLIGENCE TESTS PASSED SUCCESSFULLY! ***")
+
 
 if __name__ == "__main__":
     main()

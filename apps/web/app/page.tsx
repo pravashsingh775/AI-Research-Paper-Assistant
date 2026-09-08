@@ -257,7 +257,16 @@ export default function Home() {
         ]);
       }
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Question failed.");
+      const msg = reason instanceof Error ? reason.message : "Question failed.";
+      setError(msg);
+      setChatHistory(prev => [
+        ...prev,
+        {
+          role: "assistant",
+          content: `⚠️ ${msg}`,
+          status: "insufficient-evidence",
+        },
+      ]);
     } finally {
       setAsking(false);
     }
