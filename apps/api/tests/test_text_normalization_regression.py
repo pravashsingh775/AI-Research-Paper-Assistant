@@ -146,6 +146,7 @@ def test_normalize_and_audit_text_reports_removed_nuls() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_postgres_rejects_raw_nul_and_accepts_normalized() -> None:
     """Verify live PostgreSQL rejects raw \\x00, and accepts normalized text."""
     test_user_email = f"test_nul_{uuid4().hex[:8]}@example.com"
@@ -213,6 +214,7 @@ async def test_postgres_rejects_raw_nul_and_accepts_normalized() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_postgres_scientific_fidelity_roundtrip() -> None:
     """Verify live PostgreSQL roundtrip fidelity for Dirac notation, Greek, math, and multilingual text."""
     user_id = uuid4()
@@ -300,6 +302,7 @@ async def test_postgres_scientific_fidelity_roundtrip() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_worker_failure_isolation_and_recovery() -> None:
     """Test that worker failure handling in an isolated session prevents PendingRollbackError.
 

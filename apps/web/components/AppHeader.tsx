@@ -21,7 +21,40 @@ export default function AppHeader() {
   const [email, setEmail] = useState("");
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [aiStatus, setAiStatus] = useState({ hasKey: false, provider: "gemini", model: "" });
+  const [serviceStatus, setServiceStatus] = useState<
+    "checking" | "ready" | "degraded" | "offline"
+  >("checking");
   const pathname = usePathname();
+
+  useEffect(() => {
+    let active = true;
+    let refreshTimer: number | undefined;
+    let requestController: AbortController | undefined;
+
+    async function checkReadiness() {
+      requestController = new AbortController();
+      const timeout = window.setTimeout(() => requestController?.abort(), 8000);
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/readiness`,
+          { cache: "no-store", signal: requestController.signal },
+        );
+        if (active) setServiceStatus(response.ok ? "ready" : "degraded");
+      } catch {
+        if (active) setServiceStatus("offline");
+      } finally {
+        window.clearTimeout(timeout);
+        if (active) refreshTimer = window.setTimeout(checkReadiness, 60000);
+      }
+    }
+
+    void checkReadiness();
+    return () => {
+      active = false;
+      if (refreshTimer !== undefined) window.clearTimeout(refreshTimer);
+      requestController?.abort();
+    };
+  }, []);
 
   useEffect(() => {
     function updateStatus() {
@@ -54,10 +87,10 @@ export default function AppHeader() {
 
   return (
     <header className="app-header">
-      <Link className="brand" href="/" aria-label="Lumen Research Home">
+      <Link className="brand" href="/" aria-label="ResearchPilot AI home">
         <span className="brand-icon">⚛</span>
-        <span className="brand-title">LUMEN</span>
-        <span className="brand-badge">RESEARCH</span>
+        <span className="brand-title">RESEARCH</span>
+        <span className="brand-badge">PILOT AI</span>
       </Link>
 
       <nav className="app-nav" aria-label="Research workspace">
@@ -103,9 +136,23 @@ export default function AppHeader() {
           </span>
         </button>
 
-        <div className="status-indicator" title="All backend, Redis and pgvector services active">
+        <div
+          className="status-indicator"
+          data-status={serviceStatus}
+          role="status"
+          aria-live="polite"
+          title="API, database, Redis, and object-storage readiness"
+        >
           <span className="status-pulse" />
-          <span>Live Systems</span>
+          <span>
+            {serviceStatus === "checking"
+              ? "Checking"
+              : serviceStatus === "ready"
+                ? "Systems ready"
+                : serviceStatus === "degraded"
+                  ? "Systems degraded"
+                  : "API unavailable"}
+          </span>
         </div>
 
         <div className="auth-actions">

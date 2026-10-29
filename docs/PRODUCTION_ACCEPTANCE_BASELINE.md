@@ -1,5 +1,7 @@
 ﻿# Production Acceptance Baseline
 
+> **Historical baseline only.** These results describe a prior environment and do not represent the current workspace verification. See [PROJECT_REVIEW.md](PROJECT_REVIEW.md) for the current review.
+
 **Project:** Lumen Research
 **Date:** 2026-09-05
 **Environment:** Windows 11 (Host) + WSL2 Docker Desktop (Engine v29.7.2)

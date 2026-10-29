@@ -30,9 +30,9 @@ jobs:
         run: |
           ruff check apps/ packages/ scripts/
 
-      - name: Run Unit & Regression Tests
+      - name: Run Tests That Do Not Require Live Services
         run: |
-          python -m pytest apps/api/tests/test_text_normalization_regression.py -v
+          python -m pytest apps/api/tests/ -m "not integration" -v
 
   frontend-build:
     name: Frontend Build & Typecheck
@@ -58,4 +58,3 @@ jobs:
         working-directory: apps/web
         run: |
           npm run build
-

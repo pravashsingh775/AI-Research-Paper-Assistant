@@ -1,5 +1,7 @@
 # Lumen Research: Final System Architecture
 
+> Historical architecture document. The implemented architecture and current limitations are documented in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/PROJECT_REVIEW.md](docs/PROJECT_REVIEW.md).
+
 ## 1. System Purpose
 
 Lumen Research is an evidence-backed research discovery and paper intelligence workspace. It discovers papers from a local arXiv-derived corpus and scholarly providers, stores user-owned papers and conversations in PostgreSQL, indexes uploaded-paper chunks in pgvector, stores raw PDF binaries in MinIO S3 object storage, and exposes research tools through a modern Next.js application.

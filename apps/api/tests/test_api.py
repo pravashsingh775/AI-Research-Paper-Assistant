@@ -1,6 +1,9 @@
 from uuid import uuid4
+
+import pytest
 from fastapi.testclient import TestClient
 
+from apps.api.app.core.database import get_session
 from apps.api.app.main import app, current_user
 from apps.api.app.models import User
 
@@ -80,3 +83,51 @@ def test_comparison_is_derived_from_supplied_papers() -> None:
         assert response.json()["papers"][0]["paper"] == "Retrieval A"
     finally:
         app.dependency_overrides.pop(current_user, None)
+
+
+def test_readiness_masks_dependency_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+    class FailedSession:
+        async def execute(self, query: object) -> None:
+            raise RuntimeError("database password must not be returned")
+
+    class HealthyRedis:
+        async def ping(self) -> bool:
+            return True
+
+        async def aclose(self) -> None:
+            return None
+
+    class HealthyStorage:
+        async def put(self, key: str, data: bytes, content_type: str) -> None:
+            return None
+
+        async def exists(self, key: str) -> bool:
+            return True
+
+        async def delete(self, key: str) -> bool:
+            return True
+
+    monkeypatch.setattr(
+        "redis.asyncio.from_url",
+        lambda *args, **kwargs: HealthyRedis(),
+    )
+    monkeypatch.setattr("apps.api.app.main.get_storage", lambda: HealthyStorage())
+
+    async def override_session():
+        yield FailedSession()
+
+    app.dependency_overrides[get_session] = override_session
+    try:
+        with TestClient(app) as client:
+            response = client.get("/readiness")
+    finally:
+        app.dependency_overrides.pop(get_session, None)
+
+    assert response.status_code == 503
+    assert response.json() == {
+        "detail": {
+            "status": "degraded",
+            "checks": {"database": False, "redis": True, "storage": True},
+        }
+    }
+    assert "password" not in response.text

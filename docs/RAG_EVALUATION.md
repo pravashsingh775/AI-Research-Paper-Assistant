@@ -1,73 +1,46 @@
-﻿# Lumen Research — Quantitative RAG Evaluation Benchmark Report
+# Retrieval and Evidence-Support Evaluation
 
-**Evaluation Date:** 2026-09-06
-**Evaluation Suite:** `scripts/evaluate_rag.py` & `apps/api/tests/rag_golden_dataset.py`
-**Corpus Size:** 3 Multi-Page Full-Text Scientific Benchmark Papers (Genomics, Multimodal AI, Federated Systems)
-**Query Set:** 22 Representative Academic Queries across 10 evaluation categories
+## Reproducible run
 
----
+- **Run date:** 2026-10-29
+- **Command:** `python scripts/evaluate_rag.py`
+- **Queries:** 22 source-defined queries (17 answerable, 5 unanswerable)
+- **Corpus:** 3 synthetic, source-defined papers
+- **Scope:** local retrieval and the `evidence_supports` heuristic; no LLM calls or generated answers
 
-## 1. Executive Summary
+The script was run in the current workspace and returned:
 
-This benchmark rigorously evaluates the **Lumen Research Retrieval-Augmented Generation (RAG)** pipeline against a diverse golden dataset covering factual, methodology, dataset, results, limitations, comparison, citation, multi-hop, negative (unanswerable), and entity-confusion queries.
+| Metric | Result |
+|---|---:|
+| Recall@1 | 94.12% |
+| Recall@3 | 100.00% |
+| Recall@5 | 100.00% |
+| Recall@10 | 100.00% |
+| MRR | 0.9706 |
+| nDCG@5 | 0.9292 |
+| nDCG@10 | 0.9533 |
+| Evidence precision@5 | 24.71% |
+| Evidence recall@5 | 94.12% |
+| Answerable-query support rate | 94.12% |
+| Expected-fact coverage | 94.12% |
+| Unanswerable-query support rate | 0.00% |
+| Heuristic abstention precision | 83.33% |
+| Heuristic abstention recall | 100.00% |
 
-Unlike standard unit tests, this benchmark measures actual ranking depth, evidence precision, fact grounding, and negative abstention integrity.
+Recall@K is implemented as a hit rate: a query counts as a hit when at least one expected chunk appears in the first K results. Evidence precision/recall use the expected chunk labels. Support and abstention figures measure a rule-based classifier, not generated model responses.
 
----
+## Limitations
 
-## 2. Empirical Benchmark Results
+- The three benchmark papers and their labels are synthetic fixtures in `apps/api/tests/rag_golden_dataset.py`; they are not external scientific papers.
+- This evaluation does not call an LLM, generate answers, parse citations, or judge answer correctness. It therefore cannot establish citation accuracy, answer faithfulness, or a hallucination rate.
+- The test set is small and not representative of the 287,421-row local corpus or user-uploaded PDFs.
+- Results depend on the embedding provider selected by the current environment. Record that provider and model with future benchmark runs.
+- Evidence precision@5 is 24.71%; most returned chunks are not labeled relevant for the test query. Ranking quality needs broader evaluation.
+- The local corpus is metadata/abstract data. Its presence does not establish full-text coverage or licensing for redistribution.
 
-| Metric Category | Metric Name | Baseline (Before Hardening) | Measured Value (Hardened Release) | Production Target | Status |
-|-----------------|-------------|-----------------------------|-----------------------------------|-------------------|:------:|
-| **Retrieval Depth** | **Recall@1** | 17.65% | **94.12%** | >= 80.00% | **PASSED** |
-| | **Recall@3** | 64.71% | **100.00%** | >= 90.00% | **PASSED** |
-| | **Recall@5** | 70.59% | **100.00%** | >= 95.00% | **PASSED** |
-| | **Recall@10** | 82.35% | **100.00%** | >= 98.00% | **PASSED** |
-| **Ranking Quality** | **MRR (Mean Reciprocal Rank)** | 0.4055 | **0.9706** | >= 0.8500 | **PASSED** |
-| | **nDCG@5** | 0.4218 | **0.9292** | >= 0.8000 | **PASSED** |
-| | **nDCG@10** | 0.5009 | **0.9533** | >= 0.8500 | **PASSED** |
-| **Evidence & Citation** | **Evidence Precision (Top 5)** | 16.47% | **24.71%** | Bounded | **PASSED** |
-| | **Evidence Recall (Top 5)** | 58.82% | **94.12%** | >= 85.00% | **PASSED** |
-| | **Citation Accuracy** | 94.12% | **94.12%** | >= 90.00% | **PASSED** |
-| | **Citation Completeness** | 92.16% | **94.12%** | >= 90.00% | **PASSED** |
-| **Grounded Generation** | **Faithfulness** | 94.12% | **94.12%** | >= 90.00% | **PASSED** |
-| | **Answer Grounding** | 94.12% | **94.12%** | >= 90.00% | **PASSED** |
-| | **Hallucination Rate** | 5.88% | **5.88%** | <= 10.00% | **PASSED** |
-| **Abstention & Negatives** | **Abstention Precision** | 50.00% | **83.33%** | >= 80.00% | **PASSED** |
-| | **Abstention Recall** | 20.00% | **100.00%** | >= 95.00% | **PASSED** |
-| | **False Answer Rate** | 80.00% | **0.00%** | <= 5.00% | **PASSED** |
+## Next evaluation work
 
----
-
-## 3. Mathematical Metric Definitions
-
-1. **Recall@K**:
-   $$\text{Recall@K} = \frac{1}{|Q_{\text{ans}}|} \sum_{q \in Q_{\text{ans}}} \mathbb{I}\left( \text{TopK}(q) \cap E_q \neq \emptyset \right)$$
-   Fraction of answerable queries where at least one ground-truth evidence chunk is within the top $K$ retrieved candidates.
-
-2. **MRR (Mean Reciprocal Rank)**:
-   $$\text{MRR} = \frac{1}{|Q_{\text{ans}}|} \sum_{q \in Q_{\text{ans}}} \frac{1}{\text{rank}_1(q)}$$
-   Where $\text{rank}_1(q)$ is the 1-based rank position of the first relevant chunk retrieved.
-
-3. **nDCG@K (Normalized Discounted Cumulative Gain)**:
-   $$\text{DCG@K} = \sum_{i=1}^K \frac{2^{\text{rel}_i} - 1}{\log_2(i + 1)}, \quad \text{nDCG@K} = \frac{\text{DCG@K}}{\text{IDCG@K}}$$
-
-4. **Evidence Recall**:
-   $$\text{Evidence Recall} = \frac{1}{|Q_{\text{ans}}|} \sum_{q \in Q_{\text{ans}}} \frac{|\text{Top5}(q) \cap E_q|}{|E_q|}$$
-
-5. **Abstention Recall & False Answer Rate**:
-   $$\text{Abstention Recall} = \frac{\text{Correct Abstentions}}{|Q_{\text{unans}}|}, \quad \text{False Answer Rate} = \frac{\text{False Answers}}{|Q_{\text{unans}}|}$$
-   Guarantees that when an answer cannot be grounded or the question queries non-existent entities, the system abstains rather than hallucinating.
-
----
-
-## 4. Root Causes Identified & Hardened
-
-1. **Compound Heading Segmentation Bug:**
-   - *Problem:* `chunk_text()` previously used a regex requiring headings to end immediately before newline, skipping multi-word section headers like `Results and Findings`, `Limitations and Weaknesses`, and `Discussion and Future Work`.
-   - *Fix:* Added compound heading expressions (`results?(?:\s+and\s+(?:findings|discussion))?`, etc.). All 8 canonical academic sections are now properly split into distinct chunks.
-
-2. **Cross-Chunk False Support Vulnerability:**
-   - *Problem:* `evidence_supports()` took the union of words across all retrieved chunks. A query about an unmentioned fact would return `supported=True` if word A appeared on page 1 and word B appeared on page 10.
-   - *Fix:* Switched to strict per-chunk evidence verification with relational co-occurrence checking between model subjects and specific topic entities.
-   - *Impact:* False Answer Rate dropped from **80.00%** to **0.00%**.
+1. Add a versioned, human-reviewed dataset of real queries, relevant papers, and evidence spans with documented source/licensing.
+2. Compare lexical, dense, hybrid, and reranked retrieval on a held-out split; report confidence intervals and query-level failures.
+3. Evaluate generated responses and citations separately with a blinded human rubric. Keep abstention, evidence support, citation correctness, and factuality as distinct measures.
+4. Record the embedding model/version, retrieval parameters, corpus snapshot, software versions, and exact run command for every result.

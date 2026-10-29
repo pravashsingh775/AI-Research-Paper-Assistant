@@ -1,4 +1,4 @@
-﻿"""Golden evaluation dataset for Lumen Research RAG pipeline benchmarking.
+"""Synthetic evaluation dataset for the ResearchPilot AI retrieval pipeline.
 
 Contains 3 multi-page synthetic scientific papers with realistic academic sections:
 - Paper A: Genomic Transformers (Sparse attention, DNA-500K benchmark)

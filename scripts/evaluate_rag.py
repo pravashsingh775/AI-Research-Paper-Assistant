@@ -1,13 +1,6 @@
-﻿"""Quantitative RAG evaluation script for Lumen Research platform.
+"""Evaluate retrieval and heuristic evidence support on the synthetic golden corpus.
 
-Measures and outputs real empirical retrieval and generation metrics:
-- Recall@1, Recall@3, Recall@5, Recall@10
-- MRR (Mean Reciprocal Rank)
-- nDCG@5, nDCG@10
-- Evidence Precision & Recall
-- Citation Accuracy & Completeness
-- Faithfulness, Grounding, Hallucination Rate
-- Abstention Precision, Recall, and False Answer Rate
+This script does not invoke an LLM or evaluate generated answers or citations.
 """
 
 from __future__ import annotations
@@ -63,17 +56,18 @@ def evaluate_rag_pipeline() -> dict[str, float]:
     ndcg_10_list: list[float] = []
     evidence_precisions: list[float] = []
     evidence_recalls: list[float] = []
-    citation_accuracies: list[float] = []
-    citation_completeness_list: list[float] = []
-    faithfulness_scores: list[float] = []
+    expected_fact_coverage: list[float] = []
 
-    # Abstention metrics
+    supported_answerable_queries = 0
     correct_abstentions = 0
-    false_answers = 0
+    supported_unanswerable_queries = 0
     total_unanswerable = len(unanswerable_queries)
     total_abstention_decisions = 0
 
-    print(f"[*] Evaluating {len(GOLDEN_QUERIES)} golden queries against 3 synthetic benchmark papers...")
+    print(
+        f"[*] Evaluating {len(GOLDEN_QUERIES)} queries against "
+        f"{len(PAPERS_CORPUS)} synthetic benchmark papers..."
+    )
 
     for q in answerable_queries:
         chunks = processed_papers[q.target_paper_id]
@@ -114,17 +108,13 @@ def evaluate_rag_pipeline() -> dict[str, float]:
         # Evidence support & grounding
         supported = evidence_supports(q.question, retrieved[:5])
         if supported:
-            # Check fact coverage in retrieved text
+            supported_answerable_queries += 1
             retrieved_text = " ".join(c.text.lower() for c in retrieved[:5])
             facts_found = sum(1 for f in q.expected_facts if f.lower() in retrieved_text)
             coverage = facts_found / len(q.expected_facts) if q.expected_facts else 1.0
-            citation_accuracies.append(1.0)
-            citation_completeness_list.append(coverage)
-            faithfulness_scores.append(1.0)
+            expected_fact_coverage.append(coverage)
         else:
-            citation_accuracies.append(0.0)
-            citation_completeness_list.append(0.0)
-            faithfulness_scores.append(0.0)
+            expected_fact_coverage.append(0.0)
             total_abstention_decisions += 1
 
     for q in unanswerable_queries:
@@ -140,7 +130,7 @@ def evaluate_rag_pipeline() -> dict[str, float]:
             correct_abstentions += 1
             total_abstention_decisions += 1
         else:
-            false_answers += 1
+            supported_unanswerable_queries += 1
 
     metrics = {
         "recall@1": sum(recall_at_1) / len(recall_at_1),
@@ -152,18 +142,19 @@ def evaluate_rag_pipeline() -> dict[str, float]:
         "ndcg@10": sum(ndcg_10_list) / len(ndcg_10_list),
         "evidence_precision": sum(evidence_precisions) / len(evidence_precisions),
         "evidence_recall": sum(evidence_recalls) / len(evidence_recalls),
-        "citation_accuracy": sum(citation_accuracies) / len(citation_accuracies),
-        "citation_completeness": sum(citation_completeness_list) / len(citation_completeness_list),
-        "faithfulness": sum(faithfulness_scores) / len(faithfulness_scores),
-        "answer_grounding": sum(faithfulness_scores) / len(faithfulness_scores),
-        "hallucination_rate": 1.0 - (sum(faithfulness_scores) / len(faithfulness_scores)),
+        "answerable_support_rate": supported_answerable_queries / len(answerable_queries),
+        "expected_fact_coverage": sum(expected_fact_coverage) / len(expected_fact_coverage),
+        "unanswerable_support_rate": (
+            supported_unanswerable_queries / total_unanswerable
+            if total_unanswerable
+            else 0.0
+        ),
         "abstention_precision": correct_abstentions / total_abstention_decisions if total_abstention_decisions else 1.0,
         "abstention_recall": correct_abstentions / total_unanswerable if total_unanswerable else 1.0,
-        "false_answer_rate": false_answers / total_unanswerable if total_unanswerable else 0.0,
     }
 
     print("\n" + "=" * 60)
-    print("      LUMEN RESEARCH — QUANTITATIVE RAG BENCHMARK RESULTS     ")
+    print("      RESEARCHPILOT AI — RETRIEVAL EVALUATION                 ")
     print("=" * 60)
     print("RETRIEVAL PERFORMANCE:")
     print(f"  Recall@1:              {metrics['recall@1'] * 100:.2f}%")
@@ -173,19 +164,15 @@ def evaluate_rag_pipeline() -> dict[str, float]:
     print(f"  MRR:                   {metrics['mrr']:.4f}")
     print(f"  nDCG@5:                {metrics['ndcg@5']:.4f}")
     print(f"  nDCG@10:               {metrics['ndcg@10']:.4f}")
-    print("\nEVIDENCE & CITATION METRICS:")
-    print(f"  Evidence Precision:    {metrics['evidence_precision'] * 100:.2f}%")
-    print(f"  Evidence Recall:       {metrics['evidence_recall'] * 100:.2f}%")
-    print(f"  Citation Accuracy:     {metrics['citation_accuracy'] * 100:.2f}%")
-    print(f"  Citation Completeness: {metrics['citation_completeness'] * 100:.2f}%")
-    print("\nFAITHFULNESS & GROUNDING:")
-    print(f"  Faithfulness:          {metrics['faithfulness'] * 100:.2f}%")
-    print(f"  Answer Grounding:      {metrics['answer_grounding'] * 100:.2f}%")
-    print(f"  Hallucination Rate:    {metrics['hallucination_rate'] * 100:.2f}%")
-    print("\nABSTENTION & NEGATIVE HANDLING:")
+    print("\nRETRIEVED EVIDENCE:")
+    print(f"  Evidence Precision@5:  {metrics['evidence_precision'] * 100:.2f}%")
+    print(f"  Evidence Recall@5:     {metrics['evidence_recall'] * 100:.2f}%")
+    print("\nHEURISTIC SUPPORT SCREENING (not generated-answer evaluation):")
+    print(f"  Answerable Support:    {metrics['answerable_support_rate'] * 100:.2f}%")
+    print(f"  Expected Fact Coverage:{metrics['expected_fact_coverage'] * 100:.2f}%")
+    print(f"  Unanswerable Support:  {metrics['unanswerable_support_rate'] * 100:.2f}%")
     print(f"  Abstention Precision:  {metrics['abstention_precision'] * 100:.2f}%")
     print(f"  Abstention Recall:     {metrics['abstention_recall'] * 100:.2f}%")
-    print(f"  False Answer Rate:     {metrics['false_answer_rate'] * 100:.2f}%")
     print("=" * 60 + "\n")
 
     return metrics

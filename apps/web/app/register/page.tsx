@@ -85,7 +85,7 @@ export default function RegisterPage() {
             ⚛
           </div>
           <div className="eyebrow" style={{ letterSpacing: "0.08em", marginBottom: 6 }}>
-            LUMEN RESEARCH
+            RESEARCHPILOT AI
           </div>
           <h1 style={{ fontSize: "1.75rem", fontWeight: 800, color: "var(--ink)", margin: "0 0 8px" }}>
             Create Account

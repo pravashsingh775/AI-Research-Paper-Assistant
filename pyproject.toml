@@ -32,3 +32,6 @@ line-length = 100
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 pythonpath = ["."]
+markers = [
+  "integration: requires running application or infrastructure services",
+]

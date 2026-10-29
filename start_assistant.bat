@@ -1,11 +1,11 @@
 @echo off
 setlocal enabledelayedexpansion
 
-title Lumen Research - AI Research Paper Assistant
+title ResearchPilot AI - Research Paper Assistant
 color 0B
 
 echo ========================================================================
-echo                  LUMEN RESEARCH PLATFORM LAUNCHER                       
+echo                  RESEARCHPILOT AI PLATFORM LAUNCHER
 echo           Evidence-Backed AI Research Discovery and Analysis             
 echo ========================================================================
 echo.
@@ -43,10 +43,6 @@ echo.
 echo [*] Docker daemon is currently stopped.
 echo [*] Attempting to launch Docker Desktop automatically...
 
-if exist "C:\Users\PRAVASH\AppData\Local\Programs\DockerDesktop\Docker Desktop.exe" (
-    start "" "C:\Users\PRAVASH\AppData\Local\Programs\DockerDesktop\Docker Desktop.exe"
-    goto wait_for_docker
-)
 if exist "%LOCALAPPDATA%\Programs\DockerDesktop\Docker Desktop.exe" (
     start "" "%LOCALAPPDATA%\Programs\DockerDesktop\Docker Desktop.exe"
     goto wait_for_docker
@@ -112,6 +108,7 @@ if %errorlevel% neq 0 (
 
 echo.
 echo [*] Waiting for backend API to report healthy...
+set "api_healthy=0"
 set /a api_attempts=0
 
 :wait_api
@@ -127,19 +124,25 @@ if !api_attempts! geq 30 (
 goto wait_api
 
 :api_is_ready
+set "api_healthy=1"
 echo [OK] Backend API is healthy!
 
 :open_browser
 echo.
-echo [*] Launching Lumen Research in your default browser...
+echo [*] Launching ResearchPilot AI in your default browser...
 start http://localhost:3000
 
 :dashboard
 cls
 color 0A
 echo ========================================================================
-echo               LUMEN RESEARCH PLATFORM IS NOW ONLINE                     
+echo                RESEARCHPILOT AI STARTUP STATUS
 echo ========================================================================
+if "!api_healthy!"=="1" (
+    echo   API health check: responded
+) else (
+    echo   API health check: not confirmed; inspect Docker Compose logs
+)
 echo.
 echo   Application URLs:
 echo     - Web Workspace [UI]:       http://localhost:3000
@@ -196,7 +199,14 @@ if "%choice%"=="5" (
 if "%choice%"=="6" (
     echo.
     echo [*] Ingesting ArXiv CSV to normalized JSONL...
-    docker compose -f infra/docker/compose.yml exec backend python scripts/ingest_arxiv_csv.py data/raw/corpus/arxiv_scientific_dataset.csv data/processed/arxiv_papers.jsonl
+    if exist "data\processed\arxiv_papers.jsonl" (
+        set /p overwrite_data="Existing processed data will be replaced. Type REPLACE to continue: "
+        if /I not "!overwrite_data!"=="REPLACE" (
+            echo [!] Dataset ingestion cancelled; existing data was not changed.
+            goto dashboard
+        )
+    )
+    python scripts/ingest_arxiv_csv.py data\raw\corpus\arxiv_scientific_dataset.csv data\processed\arxiv_papers.jsonl --overwrite
     echo.
     pause
     goto dashboard

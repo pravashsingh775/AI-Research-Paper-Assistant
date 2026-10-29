@@ -17,6 +17,8 @@ import pytest
 
 from apps.api.tests.test_e2e_lifecycle import create_minimal_pdf_bytes
 
+pytestmark = pytest.mark.integration
+
 
 @pytest.fixture
 def base_url() -> str:

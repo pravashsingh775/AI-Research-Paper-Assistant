@@ -6,10 +6,12 @@ import argparse
 import csv
 import hashlib
 import json
+import os
 import sys
 from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 
 REQUIRED_COLUMNS = {
     "id",
@@ -68,20 +70,54 @@ def read_rows(input_path: Path) -> Iterator[dict[str, object]]:
             yield normalize_row(row)
 
 
-def ingest(input_path: Path, output_path: Path) -> tuple[int, int]:
+def ingest(
+    input_path: Path, output_path: Path, *, overwrite: bool = False
+) -> tuple[int, int]:
+    if input_path.resolve() == output_path.resolve():
+        raise ValueError("Input and output paths must be different.")
+    if output_path.exists() and not overwrite:
+        raise FileExistsError(
+            f"Output already exists: {output_path}. Pass --overwrite to replace it."
+        )
+
     output_path.parent.mkdir(parents=True, exist_ok=True)
     count = 0
     skipped_duplicates = 0
     seen_ids: set[str] = set()
+    temporary_path: Path | None = None
 
-    with output_path.open("w", encoding="utf-8", newline="\n") as output:
-        for record in read_rows(input_path):
-            if record["id"] in seen_ids:
-                skipped_duplicates += 1
-                continue
-            seen_ids.add(str(record["id"]))
-            output.write(json.dumps(record, ensure_ascii=True) + "\n")
-            count += 1
+    try:
+        with NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            newline="\n",
+            dir=output_path.parent,
+            prefix=f".{output_path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as output:
+            temporary_path = Path(output.name)
+            for record in read_rows(input_path):
+                if record["id"] in seen_ids:
+                    skipped_duplicates += 1
+                    continue
+                seen_ids.add(str(record["id"]))
+                output.write(json.dumps(record, ensure_ascii=True) + "\n")
+                count += 1
+
+        if overwrite:
+            os.replace(temporary_path, output_path)
+        else:
+            try:
+                os.link(temporary_path, output_path)
+            except FileExistsError:
+                raise FileExistsError(
+                    f"Output already exists: {output_path}. Pass --overwrite to replace it."
+                ) from None
+    finally:
+        if temporary_path and temporary_path.exists():
+            temporary_path.unlink()
+
     return count, skipped_duplicates
 
 
@@ -97,10 +133,15 @@ def main() -> int:
         type=Path,
         help="Path for normalized JSONL, usually under data/processed/",
     )
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Replace an existing output file after successful ingestion",
+    )
     args = parser.parse_args()
 
     try:
-        count, duplicates = ingest(args.input, args.output)
+        count, duplicates = ingest(args.input, args.output, overwrite=args.overwrite)
     except (OSError, ValueError, csv.Error) as error:
         print(f"Ingestion failed: {error}", file=sys.stderr)
         return 1

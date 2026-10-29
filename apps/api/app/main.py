@@ -2,16 +2,16 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-import logging
 from uuid import UUID, uuid4
 
-import pymupdf as fitz
 import httpx
+import pymupdf as fitz
 from fastapi import Depends, FastAPI, File, HTTPException, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -79,7 +79,7 @@ from apps.api.app.services.reranker import rerank
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="AI Research Paper Assistant API", version="0.1.0")
+app = FastAPI(title="ResearchPilot AI API", version="0.1.0")
 
 
 @app.middleware("http")
@@ -190,7 +190,7 @@ def _paper_terms(paper: PaperInput) -> set[str]:
 
 
 async def _verify_paper_access(
-    papers: list[PaperInput], user: User | None, session: AsyncSession
+    papers: list[PaperInput], user: User, session: AsyncSession
 ) -> None:
     uuid_ids: list[UUID] = []
     for p in papers:
@@ -205,8 +205,7 @@ async def _verify_paper_access(
         Paper.id.in_(uuid_ids),
         Paper.owner_id.is_not(None),
     )
-    if user:
-        query = query.where(Paper.owner_id != user.id)
+    query = query.where(Paper.owner_id != user.id)
     result = await session.execute(query)
     unauthorized = result.scalars().all()
     if unauthorized:
@@ -788,8 +787,9 @@ async def readiness(session: AsyncSession = Depends(get_session)) -> dict[str, A
 
         res = await session.execute(text("SELECT 1"))
         checks["database"] = res.scalar() == 1
-    except Exception as exc:
-        checks["database"] = f"unhealthy: {exc}"
+    except Exception:
+        logger.exception("Readiness check failed for database")
+        checks["database"] = False
 
     # 2. Redis check
     try:
@@ -799,8 +799,9 @@ async def readiness(session: AsyncSession = Depends(get_session)) -> dict[str, A
         pong = await r.ping()
         checks["redis"] = bool(pong)
         await r.aclose()
-    except Exception as exc:
-        checks["redis"] = f"unhealthy: {exc}"
+    except Exception:
+        logger.exception("Readiness check failed for Redis")
+        checks["redis"] = False
 
     # 3. Storage check
     try:
@@ -810,8 +811,9 @@ async def readiness(session: AsyncSession = Depends(get_session)) -> dict[str, A
         exists = await storage.exists(test_key)
         await storage.delete(test_key)
         checks["storage"] = exists
-    except Exception as exc:
-        checks["storage"] = f"unhealthy: {exc}"
+    except Exception:
+        logger.exception("Readiness check failed for object storage")
+        checks["storage"] = False
 
     all_ready = all(val is True for val in checks.values())
     if not all_ready:
@@ -1842,7 +1844,7 @@ async def delete_chat(
 async def compare(
     request: CollectionRequest,
     http_request: Request,
-    user: User | None = Depends(optional_user),
+    user: User = Depends(current_user),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await _verify_paper_access(request.papers, user, session)
@@ -1862,7 +1864,7 @@ async def compare(
 async def trends(
     request: CollectionRequest,
     http_request: Request,
-    user: User | None = Depends(optional_user),
+    user: User = Depends(current_user),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await _verify_paper_access(request.papers, user, session)
@@ -1882,7 +1884,7 @@ async def trends(
 async def research_gaps(
     request: CollectionRequest,
     http_request: Request,
-    user: User | None = Depends(optional_user),
+    user: User = Depends(current_user),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await _verify_paper_access(request.papers, user, session)
@@ -1902,7 +1904,7 @@ async def research_gaps(
 async def research_ideas(
     request: CollectionRequest,
     http_request: Request,
-    user: User | None = Depends(optional_user),
+    user: User = Depends(current_user),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await _verify_paper_access(request.papers, user, session)
@@ -1922,7 +1924,7 @@ async def research_ideas(
 async def proposal(
     request: CollectionRequest,
     http_request: Request,
-    user: User | None = Depends(optional_user),
+    user: User = Depends(current_user),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await _verify_paper_access(request.papers, user, session)
@@ -1974,7 +1976,7 @@ async def get_ai_status(
 @app.post("/api/similarity-map")
 async def similarity_map(
     request: CollectionRequest,
-    user: User | None = Depends(optional_user),
+    user: User = Depends(current_user),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     await _verify_paper_access(request.papers, user, session)

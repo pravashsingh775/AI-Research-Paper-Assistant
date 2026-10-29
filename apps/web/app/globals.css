@@ -237,18 +237,39 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   gap: 6px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--emerald);
-  background: var(--emerald-light);
   padding: 4px 10px;
   border-radius: var(--radius-pill);
-  border: 1px solid var(--emerald-border);
+  border: 1px solid var(--line);
+  color: var(--ink-muted);
+  background: var(--surface);
+}
+
+.status-indicator[data-status="ready"] {
+  color: var(--emerald);
+  background: var(--emerald-light);
+  border-color: var(--emerald-border);
+}
+
+.status-indicator[data-status="degraded"] {
+  color: #b45309;
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.status-indicator[data-status="offline"] {
+  color: #b91c1c;
+  background: #fef2f2;
+  border-color: #fecaca;
 }
 
 .status-pulse {
   width: 7px;
   height: 7px;
-  background-color: var(--emerald);
+  background-color: currentColor;
   border-radius: 50%;
+}
+
+.status-indicator[data-status="ready"] .status-pulse {
   animation: pulse-ring 2s infinite ease-out;
 }
 
@@ -1322,4 +1343,3 @@ tr:hover td {
   box-shadow: var(--shadow-hover);
   transform: translateY(-2px);
 }
-

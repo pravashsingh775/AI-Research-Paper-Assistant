@@ -1,5 +1,7 @@
 # LUMEN RESEARCH — FINAL PRODUCTION ACCEPTANCE REPORT
 
+> **Historical, unverified artifact.** This report contains self-reported acceptance claims and is not current production evidence. The checked-in benchmark artifacts contain failing HTTP status codes, and the current service-backed test suite was not run in this review. See [PROJECT_REVIEW.md](PROJECT_REVIEW.md) for reproducible checks and current limitations.
+
 **Platform:** Lumen Research — Evidence-Backed AI Research Discovery & Paper Intelligence  
 **Evaluator:** Principal Software Architect & QA/SRE Engineering Team  
 **Evaluation Date:** September 6, 2026  
@@ -174,4 +176,3 @@ To launch the complete platform in a single click:
 - **Liveness Probe:** `http://localhost:8000/liveness`
 - **Readiness Probe:** `http://localhost:8000/readiness`
 - **MinIO Console:** `http://localhost:9001` (User: `minio` / Pass: `miniosecret`)
-

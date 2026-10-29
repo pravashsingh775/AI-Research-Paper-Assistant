@@ -9,6 +9,8 @@ from uuid import uuid4
 import httpx
 import pytest
 
+pytestmark = pytest.mark.integration
+
 
 def create_minimal_pdf_bytes(
     title: str = "Test Academic Paper", content: str = "Sample content."

@@ -109,7 +109,7 @@ export default function AISettingsModal({ isOpen, onClose }: AISettingsModalProp
     window.dispatchEvent(new Event("llm-settings-updated"));
     setStatusMessage({
       type: "info",
-      text: "API key cleared. Lumen will operate in Offline Heuristic Mode (TF-IDF & Lexical Synthesis).",
+      text: "API key cleared. ResearchPilot AI will use its local evidence-limited fallback.",
     });
   }
 
@@ -447,4 +447,3 @@ export default function AISettingsModal({ isOpen, onClose }: AISettingsModalProp
     </div>
   );
 }
-

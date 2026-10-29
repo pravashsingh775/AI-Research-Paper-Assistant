@@ -633,7 +633,7 @@ function PaperWorkspace({
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                       <strong style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.04em", opacity: 0.85 }}>
-                        {isAssistant ? "🤖 Lumen Research Assistant" : "👤 You"}
+                        {isAssistant ? "🤖 ResearchPilot AI" : "👤 You"}
                       </strong>
                       {isAssistant && (
                         <span className={`badge ${isInsufficient ? "badge-failed" : "badge-full-text"}`}>

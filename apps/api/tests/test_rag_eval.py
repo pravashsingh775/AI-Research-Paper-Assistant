@@ -11,6 +11,7 @@ from apps.api.app.services.rag import (
     hybrid_retrieve,
     is_primary_study_section,
 )
+from scripts.evaluate_rag import evaluate_rag_pipeline
 
 SAMPLE_RESEARCH_PAPER = """
 Abstract
@@ -141,3 +142,17 @@ def test_rag_config_custom_weights(paper_chunks: list[Chunk]) -> None:
     )
     assert len(results_lexical) > 0
     assert "adamw" in results_lexical[0].text.lower()
+
+
+def test_evaluation_labels_support_heuristics_not_generated_answers(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    metrics = evaluate_rag_pipeline()
+    output = capsys.readouterr().out
+
+    assert metrics["recall@3"] == 1.0
+    assert metrics["unanswerable_support_rate"] == 0.0
+    assert "HEURISTIC SUPPORT SCREENING" in output
+    assert "Hallucination Rate" not in output
+    assert "Citation Accuracy" not in output
+    assert "hallucination_rate" not in metrics

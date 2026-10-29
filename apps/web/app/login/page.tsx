@@ -35,31 +35,6 @@ export default function LoginPage() {
     }
   }
 
-  async function instantDemoSignIn() {
-    setBusy(true);
-    setError("");
-    try {
-      const response = await fetch(`${API}/api/auth/token`, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ username: "researcher@lumen.ai", password: "research123" }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.detail || "Unable to sign in");
-      localStorage.setItem("research_token", data.access_token);
-      router.push("/");
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Unable to sign in with demo account");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  function fillDemo() {
-    setEmail("researcher@lumen.ai");
-    setPassword("research123");
-  }
-
   return (
     <main
       className="auth-shell"
@@ -104,7 +79,7 @@ export default function LoginPage() {
             ⚛
           </div>
           <div className="eyebrow" style={{ letterSpacing: "0.08em", marginBottom: 6 }}>
-            LUMEN RESEARCH
+            RESEARCHPILOT AI
           </div>
           <h1 style={{ fontSize: "1.75rem", fontWeight: 800, color: "var(--ink)", margin: "0 0 8px" }}>
             Welcome Back
@@ -210,32 +185,7 @@ export default function LoginPage() {
           </p>
         )}
 
-        {/* Quick Fill / Demo Link */}
         <div style={{ marginTop: 20, textAlign: "center", borderTop: "1px solid var(--line)", paddingTop: 18 }}>
-          <button
-            type="button"
-            onClick={instantDemoSignIn}
-            disabled={busy}
-            style={{
-              width: "100%",
-              padding: "10px 16px",
-              background: "var(--surface-muted, #f1f5f9)",
-              border: "1px solid var(--border, #cbd5e1)",
-              borderRadius: "var(--radius-sm)",
-              fontSize: 13,
-              fontWeight: 600,
-              color: "var(--primary)",
-              cursor: busy ? "not-allowed" : "pointer",
-              marginBottom: 14,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-            }}
-          >
-            <span>⚡</span>
-            <span>1-Click Demo Sign In (researcher@lumen.ai)</span>
-          </button>
           <p style={{ margin: "0 0 8px", fontSize: 13, color: "var(--ink-secondary)" }}>
             New researcher?{" "}
             <Link href="/register" style={{ color: "var(--primary)", fontWeight: 600, textDecoration: "none" }}>
